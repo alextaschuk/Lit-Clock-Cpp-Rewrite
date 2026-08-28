@@ -5,6 +5,7 @@
 
 const int& SCREEN_WIDTH = 800;
 const int& SCREEN_HEIGHT = 480;
+const float SCALE_MULTIPLIER = 0.99; // to constrain bboxes to make sure text fits
 
 const int& BG_COLOR = 255;
 const int& QUOTE_COLOR = 128;

@@ -47,13 +47,13 @@ class Pen {
 public:
     stbtt_fontinfo font;
     Fonts fonts;
-    float fontScale;
+    float fontScale; // value used to convert something from font units to pixel units
     short int color = 128;
-    TextType textType = QUOTE;
-    std::string text;
-    BoundingBox bbox;
-    float x = 0;
-    float y = 0;
+    TextType textType = QUOTE; // is the text that is being written a quote or credits for a quote?
+    std::string text; // The text that the pen is writing.
+    BoundingBox bbox; // An area that the pen must write inside of.
+    float x = 0; // X coordinate of the pen's position on the image.
+    float y = 0; // Y coordinate of the pen's position on the image.
     // TODO: character delimiters
 
     void reset (float x, float y);

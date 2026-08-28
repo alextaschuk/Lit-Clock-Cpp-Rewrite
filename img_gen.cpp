@@ -1,9 +1,3 @@
-/**
- * Codepoints (e.g. 65 for 'A') are rendered as glyphs. 
- * Glyph index: A font-specific int ID representing a glyph
- * Current Point: The origin of each character (where it is on the screen)
- * Vertical font metrics: Used to vertically space and position characters
- */
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
@@ -13,10 +7,25 @@
 #include <iostream>
 #include <print>
 
-
 #include "constants.hpp"
 #include "writer.cpp"
 
+/**
+ * Split a string of text into individual words. Source: https://stackoverflow.com/a/14266139
+ */
+std::vector<std::string> split(std::string s, const std::string& delimiter) {
+    std::vector<std::string> tokens;
+    size_t pos = 0;
+    std::string token;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+        token = s.substr(0, pos);
+        tokens.push_back(token);
+        s.erase(0, pos + delimiter.length());
+    }
+    tokens.push_back(s);
+
+    return tokens;
+}
 
 void initFont(const std::string& fontPath, std::vector<unsigned char>& outBuf, stbtt_fontinfo& outFont)
 {
@@ -28,28 +37,130 @@ void initFont(const std::string& fontPath, std::vector<unsigned char>& outBuf, s
 }
 
 
-void formatWord(std::string word, std::vector<std::string>& lines, const int& wordLength, Pen& pen)
+/**
+ * stb expects a unicode codepoint (a unique ID for unicode characters).
+ * Strings store raw bytes as data, and they are encoded as UTF-8. All 
+ * ASCII characters are 1 byte large, so grabbing them from a string by 
+ * index (e.g., `char c = word[i]`) works. However, there are non-ASCII
+ * UTF-8 characters that are encoded as multiple bytes.
+ * - For example an em dash is encoded as 3 bytes: `0xE2 0x80 0x94`.
+ */
+int decodeUTF8(const std::string& s, size_t i, int& numBytes)
+{
+    unsigned char c = s[i];
+
+    /**
+     * How the check works:
+     * The leading bits of the byte tell us how many bytes
+     * are used to make the entire character. We perform an
+     * AND operation on the character and a mask to determine
+     * how many bytes make up the character. 
+     * 
+     * The return statements:
+     * Will use a 2-byte char as an example. The leading bits of
+     * the first byte contain how many bytes make up the char (110xxxxx),
+     * so there are 5 bits that are available to be used for data. The last 
+     * byte is always the continuation byte. The two leading bits of the 
+     * continuation byte are always 10yyyyyy, so there are 6 bits available
+     * to be used for data in this byte. 11 bits in total.
+     * 
+     * First, we do the opposite of the check in the if statement: c & 0x1F.
+     * This zeroes out the leading bits that tell us how many bytes the char is.
+     * E.g. (110xxxxx & 0x1F) -> 000xxxxx This gives us only the 5 data bits.
+     * 
+     * Then we shift byte 0's bits over 6 spots to make room for the 6 bits of data
+     * that are in the continuation byte. (110xxxxx & 0x1F) << 6 -> 000xxxxx000000
+     * 
+     * Then we extract the continuation byte's data: s[i + 1] & 0x3F
+     * 
+     * Lastly merge the two pieces together with an OR operation: ((110xxxxx & 0x1F) << 6) | (s[i+1] & 0x3F)
+     */
+    if (c < 0x80) // 0xxxxxxx for 1 byte (ASCII character)
+    {
+        numBytes = 1;
+        return c;
+    }
+    else if ((c & 0xE0) == 0xC0)  // 110xxxxx for 2 bytes
+    {
+        numBytes = 2;
+        int byteZero = (c & 0x1F) << 6;
+        int byteOne = s[i + 1] & 0x3F;
+        return byteZero | byteOne;
+        //return ((c & 0x1F) << 6) | (s[i+1] & 0x3F);
+    }
+    else if ((c & 0xF0) == 0xE0) // 1110xxxx for 3 bytes
+    {
+        numBytes = 3;
+        int byteZero = (c & 0x0F) << 12;
+        int byteOne = (s[i+1] & 0x3F) << 6;
+        int byteTwo = s[i+2] & 0x3F;
+        return byteZero | byteOne | byteTwo;
+        //return ((c & 0x0F) << 12) | ((s[i+1] & 0x3F) << 6) | (s[i+2] & 0x3F);
+    }
+    else if ((c & 0xF8) == 0xF0) // 11110xxx for 4 bytes
+    {
+        numBytes = 4;
+        int byteZero = ((c & 0x07) << 18);
+        int byteOne = (s[i+1] & 0x3F) << 12;
+        int byteTwo = (s[i+2] & 0x3F) << 6 ;
+        int byteThree = s[i+3] & 0x3F;
+        return byteZero | byteOne | byteTwo | byteThree;
+        //return ((c & 0x07) << 18) | ((s[i+1] & 0x3F) << 12) | ((s[i+2] & 0x3F) << 6) | (s[i+3] & 0x3F);
+    }
+
+    numBytes = 1; // the byte is malformed so we should skip it.
+    return c;
+
+}
+
+
+/**
+ * Calculate the height of a line using a given font scale.
+ * (ascent - descent) is the glyph's height.
+ * lineGap is the font's recommended spacing between the bottom of one row's descent and the top of the next row's ascent.
+ * then we need to scale it from font units to pixel units.
+ */
+int getLineHeight(const stbtt_fontinfo& font, const float& fontScale)
 {
     int ascent, descent, lineGap;
-    stbtt_GetFontVMetrics(&pen.font, &ascent, &descent, &lineGap);
-    int lineHeight = static_cast<int>((ascent - descent + lineGap) * pen.fontScale);
+    stbtt_GetFontVMetrics(&font, &ascent, &descent, &lineGap);
+    return static_cast<int>((ascent - descent + lineGap) * fontScale);
+}
 
+/**
+ * For a given line of text, find the height of the tallest 
+ * glyph.
+ */
+int tallestGlyph(const std::string& line, const Pen& pen)
+{
+    int maxHeight = 0;
+    for (const std::string& word : split(line, " "))
+    {
+        for (size_t i = 0; i < word.size(); )
+        {
+            int numBytes;
+            int codepoint = decodeUTF8(word, i, numBytes);
+            i += numBytes;
+
+            BoundingBox glyphBox;
+            stbtt_GetCodepointBitmapBox(&pen.font, codepoint, pen.fontScale, pen.fontScale, &glyphBox.topLeftX, &glyphBox.topLeftY, &glyphBox.bottomRightX, &glyphBox.bottomRightY);
+            maxHeight = (glyphBox.topLeftY < maxHeight) ? glyphBox.topLeftY : maxHeight;
+        }
+    }
+    return maxHeight;
+}
+
+
+
+
+void formatWord(std::string word, std::vector<std::string>& lines, const int& wordLength, Pen& pen)
+{
     /* TODO: Add word formatting for delim chars*/
     if (pen.x + wordLength > pen.bbox.bottomRightX)
     { // Current word would go past right side of image. Put on next line.
-
-        // Reset the x coord, move to the next line, and add the current word to the new line.
         pen.x = pen.bbox.topLeftX; // reset pen to left side of image
-        
-        // move down 1 line
-        // (ascent - descent) is the glyph's height. 
-        // lineGap is the font's recommended spacing between the bottom of one row's descent
-        // and the top of the next row's ascent. Then, we need to scale it from font units to pixel units.
-        //int ascent, descent, lineGap;
-        //stbtt_GetFontVMetrics(&pen.font, &ascent, &descent, &lineGap);
-        //pen.y += (ascent - descent + lineGap) * pen.fontScale;
-        pen.y += lineHeight;
-        lines.push_back(word);
+        pen.y += getLineHeight(pen.font, pen.fontScale); // move down 1 line
+        lines.push_back(word); // add the current word to the new line
     } 
     else
     {
@@ -62,25 +173,6 @@ void formatWord(std::string word, std::vector<std::string>& lines, const int& wo
     }
 }
 
-/**
- * Split a string of text into individual words. Modified from https://stackoverflow.com/a/14266139
- */
-std::vector<std::string> split(std::string s, const std::string& delimiter)
-{
-    std::vector<std::string> tokens;
-    size_t pos = 0;
-    std::string token;
-
-    while ((pos = s.find(delimiter)) != std::string::npos)
-    {
-        token = s.substr(0, pos);
-        tokens.push_back(token);
-        s.erase(0, pos + delimiter.length());
-    }
-    tokens.push_back(s);
-    return tokens;
-}
-
 std::string wrapText(Pen& pen)
 {
     std::vector<std::string> lines; // store wrapped text (e.g. ["this is a line", "this is another"])
@@ -91,16 +183,19 @@ std::string wrapText(Pen& pen)
     {
         float wordLengthF = 0.0f;
         int wordLength = 0;
-        for (size_t i = 0; i < word.size(); ++i)
+        for (size_t i = 0; i < word.size(); )
         { /* Get the length of the word */
-            char c = word[i];
+            int numBytes;
+            int codePoint = decodeUTF8(word, i, numBytes);
+            i += numBytes;
+
             int advanceWidth, lsb;
-            stbtt_GetCodepointHMetrics(&pen.font, c, &advanceWidth, &lsb); 
+            stbtt_GetCodepointHMetrics(&pen.font, codePoint, &advanceWidth, &lsb); 
             wordLengthF += advanceWidth * pen.fontScale;
 
             if (i + 1 < word.size())
             {
-                int kern = stbtt_GetCodepointKernAdvance(&pen.font, c, word[i + 1]);
+                int kern = stbtt_GetCodepointKernAdvance(&pen.font, codePoint, word[i + 1]);
                 wordLengthF += kern * pen.fontScale;
             }
         }
@@ -120,13 +215,9 @@ std::string wrapText(Pen& pen)
 
         pen.x += wordLength;
 
-        int ascent, descent, lineGap;
-        stbtt_GetFontVMetrics(&pen.font, &ascent, &descent, &lineGap);
-        int lineHeight = static_cast<int>((ascent - descent + lineGap) * pen.fontScale);
-
+        int lineHeight = getLineHeight(pen.font, pen.fontScale);
         if (pen.y + lineHeight > pen.bbox.bottomRightY)
         { /* current wrapping writes past text's bbox. Need to reduce font size. */
-            //std::cout << "pen's y pos is past bbox bottom right." << std::endl;
             pen.reset(pen.bbox.topLeftX, pen.bbox.topLeftY);
             return "";
         }
@@ -150,20 +241,16 @@ void findOptimalFontScale(Pen& pen, std::string& wrappedLines)
     float max = MAX_FONT_SCALE;
     float optimalScale = 0.0f;
 
+    /* Binary search to find best font size. */
     while (min <= max)
-    { /* Binary search to find best font size. */
+    {
         float mid = std::floor(min + (max - min) / 2);
-        std::string lines;
-
-        //std::cout << " min size:" << min << std::endl;
-        //std::cout << " mid size:" << mid << std::endl;
-        //std::cout << " max size:" << max << std::endl;
         pen.fontScale = stbtt_ScaleForPixelHeight(&pen.font, mid);
-
+        
+        std::string lines;
         lines = wrapText(pen);
-        //std::cout << "Lines: " << lines << std::endl;
         if (!lines.empty())
-        { // Text fits. try a larger font scale
+        { /* Text fits. try a larger font scale */
             optimalScale = mid;
             min = mid + 1;
             wrappedLines = lines;
@@ -174,7 +261,7 @@ void findOptimalFontScale(Pen& pen, std::string& wrappedLines)
         }
     }
     
-    if (optimalScale < MIN_FONT_SCALE){
+    if (optimalScale < MIN_FONT_SCALE) {
         std::println("Text doesn't fit in the pen's bbox.");
     }
     else {
@@ -185,10 +272,7 @@ void findOptimalFontScale(Pen& pen, std::string& wrappedLines)
     for (const std::string& line : split(wrappedLines, "\n"))
     {
         float currentLineWidth = 0;
-        int ascent, descent, lineGap;
-        stbtt_GetFontVMetrics(&pen.fonts.regular, &ascent, &descent, &lineGap);
-
-        linesHeight += (ascent - descent + lineGap) * pen.fontScale;
+        linesHeight += getLineHeight(pen.font, pen.fontScale);
 
         for (const char c : line)
         {
@@ -202,13 +286,14 @@ void findOptimalFontScale(Pen& pen, std::string& wrappedLines)
     }
     if (pen.textType == CREDITS)
     { /* Resize the credit bbox to optimize how big the quote bbox is. */
-        pen.bbox.topLeftX = pen.bbox.bottomRightX - longestLineWidth;
-        pen.bbox.topLeftY = pen.bbox.bottomRightY - linesHeight;
+        pen.bbox.topLeftX = static_cast<int>((pen.bbox.bottomRightX - longestLineWidth) * SCALE_MULTIPLIER);
+        pen.bbox.topLeftY = static_cast<int>((pen.bbox.bottomRightY - linesHeight) * SCALE_MULTIPLIER);
     }
 
 }
 
-int formatChar(char& c, Pen pen)
+
+int formatChar(int& c, Pen pen)
 {
     //TODO
     return 1;
@@ -216,72 +301,110 @@ int formatChar(char& c, Pen pen)
 
 void drawWord(std::vector<unsigned char>& image, std::string word, Pen& pen)
 {   
-    int advanceWidth, lsb;
-    int imgStride = pen.bbox.bottomRightX;
-
-    for (size_t i = 0; i < word.length(); ++i)
+    for (size_t i = 0; i < word.length(); )
     {
-        char c = word[i];
+        int numBytes;
+        int codepoint = decodeUTF8(word, i, numBytes);
+        i += numBytes;
         // TODO: format char
-        if (formatChar(c, pen) == 0) continue;
+        if (formatChar(codepoint, pen) == 0) { i += numBytes; continue; }
 
-        stbtt_GetCodepointHMetrics(&pen.font, c, &advanceWidth, &lsb);
+        int advanceWidth; // how far the pen should move after drawing a glyph (in font units)
+        stbtt_GetCodepointHMetrics(&pen.font, codepoint, &advanceWidth, 0);
 
-        BoundingBox glyphBox; // a bbox around a single glyph
-        stbtt_GetCodepointBitmapBox(&pen.font, c, pen.fontScale, pen.fontScale, &glyphBox.topLeftX, &glyphBox.topLeftY, &glyphBox.bottomRightX, &glyphBox.bottomRightY); // rasterize glyph c
-        int glyphWidth = glyphBox.bottomRightX - glyphBox.topLeftX; // glyph's x offset (in pixel coords from 
-        int glyphHeight = glyphBox.bottomRightY - glyphBox.topLeftY; // glyph's pixel height
+        /**
+         * We get a bbox around a single glyph's rendered ink, relative to the glyph's origin. (not the full em-square/advance-width box)
+         * pen.x/pen.y track where the cursor is on the image. Specifically, pen.y tracks where the glyph's baseline is.
+         * Example for glyph 'A':
+         *  glyphBox.topLeftX  = 1      // ink starts 1px right of the origin
+         *  glyphBox.topLeftY  = -18    // ink starts 18px above the baseline
+         *  glyphBox.bottomRightX = 15
+         *  glyphBox.bottomRightY = 0   // ink ends right at the baseline (for something like 'j' this would be negative.)
+         */
+        BoundingBox glyphBox;
+        stbtt_GetCodepointBitmapBox(&pen.font, codepoint, pen.fontScale, pen.fontScale, &glyphBox.topLeftX, &glyphBox.topLeftY, &glyphBox.bottomRightX, &glyphBox.bottomRightY); // rasterize glyph c
+        int glyphWidth = glyphBox.bottomRightX - glyphBox.topLeftX;
+        int glyphHeight = glyphBox.bottomRightY - glyphBox.topLeftY;
 
-        float drawX = pen.x + glyphBox.topLeftX; // pixel x coord where the glyph starts (topLeftX and topLeftY can be negative)
-        float drawY = pen.y + glyphBox.topLeftY; // pixel y coord where the glyph starts (pen.y must be the text baseline, not the top edge of the bbox)
+        /**
+         * (drawX, drawY) is the coordinate on the image where the top-left of the glyph's bbox should be placed.
+         * TODO: come up with better variable names
+         */
+        float drawX = pen.x + glyphBox.topLeftX;
+        float drawY = pen.y + glyphBox.topLeftY;
 
+        /**
+         * Handle case when a glyph's ink starts outside the left of 
+         * or above the image's bounding box. Necessary since glyphWidth
+         * and glyphHeight can be negative.
+         */
         if (drawX < pen.bbox.topLeftX)
         {
             float shiftX = pen.bbox.topLeftX - drawX;
-            pen.x += shiftX;
+            pen.x += shiftX; // move the pen right so that the glyph fits.
             drawX += shiftX;
         }
 
         if (drawY < pen.bbox.topLeftY)
         {
             float shiftY = pen.bbox.topLeftY - drawY;
-            pen.y += shiftY;
+            pen.y += shiftY; // move the pen down so that the glyph fits.
             drawY += shiftY;
         }
 
-        // make a temp buf for the current glyph (this is called blitting)
-        std::vector<unsigned char> glyphBuf(glyphWidth * glyphHeight, QUOTE_COLOR);
-        stbtt_MakeCodepointBitmap(&pen.font, glyphBuf.data(), glyphWidth, glyphHeight, glyphWidth, pen.fontScale, pen.fontScale, c);
+        /**
+         * Make a temporary buffer for the rasterized glyph, then copy it 
+         * onto the image (aka blitting).
+         */
+        std::vector<unsigned char> glyphBuf(glyphWidth * glyphHeight, 0);
+        stbtt_MakeCodepointBitmap(&pen.font, glyphBuf.data(), glyphWidth, glyphHeight, glyphWidth, pen.fontScale, pen.fontScale, codepoint);
         
-        // copy (blit) the glyph's buffer onto the image's buffer pixel by pixel
         for (int row = 0; row < glyphHeight; ++row) {
             for (int col = 0; col < glyphWidth; ++col) {
-                int destX = static_cast<int>(drawX + col);
-                int destY = static_cast<int>(drawY + row);
+                int destX = static_cast<int>(drawX + col); // The rasterized glyph's x coordinate of the current pixel
+                int destY = static_cast<int>(drawY + row); // The rasterized glyph's y coordinate of the current pixel
 
+                // make sure the pixel fits
                 if (destX >= pen.bbox.topLeftX && destX < pen.bbox.bottomRightX &&
                     destY >= pen.bbox.topLeftY && destY < pen.bbox.bottomRightY)
                 {
-                    unsigned char glyphPixel = glyphBuf[row * glyphWidth + col];
-                    if (glyphPixel > 0) {
-                        int pixelIdx = destY * imgStride + destX;
-                        image[pixelIdx] = 255 - glyphPixel;
+                    unsigned char glyphPixel = glyphBuf[row * glyphWidth + col]; // foreground pixel
+                    if (glyphPixel > 0) // only want non-background pixels
+                    {
+                        /**
+                         * alpha = (object's opacity * its pixel coverage)
+                            * an obj that is 60% opaque and covers 30% of a pixel's 
+                            * area has an alpha value of 18% in that pixel.
+                            * "alpha" and "opacity" are often synonomous.
+                         * use linear interpolation between two colors, weighted by
+                         * an alpha value to determine the pixel's color.
+                         * Alpha compositing is generally: result = foreground * alpha + background * (1 - alpha)
+                            * alpha is usually normalized to [0, 1] but we are using 8-bit space here (TODO: reduce to 4-bit?)
+                            * so we use a range of [0, 255] instead. 
+                            * glyphPixel (0-255) plays the role of alpha * 255.
+                            * (255 - glyphPixel) plays the role of (1 - alpha * 255)
+                            * dividing the sum by 255 at the end normalizes it to [0, 255].
+                         */
+                        int pixelIdx = destY * pen.bbox.bottomRightX + destX; // this converts the 2D coords of the pixel into a 1D array index
+                        int backgroundPixel = image[pixelIdx];
+                        image[pixelIdx] = (pen.color * glyphPixel + backgroundPixel * (255 - glyphPixel)) / 255;
                     }
                 }
             }
         }
 
-        pen.x += (advanceWidth * pen.fontScale);
+        pen.x += (advanceWidth * pen.fontScale); // move the pen to the right for the next glyph.
 
         if (i + 1 < word.length())
-        {
-            int kern = stbtt_GetCodepointKernAdvance(&pen.font, c, word[i + 1]);
-            pen.x += kern * pen.fontScale;
+        { // apply any necessary kerning as well
+            int kerningAdvance = stbtt_GetCodepointKernAdvance(&pen.font, codepoint, word[i + 1]);
+            pen.x += kerningAdvance * pen.fontScale;
         }
     }
     
     // add the length of a space after each word
-    stbtt_GetCodepointHMetrics(&pen.font, ' ', &advanceWidth, &lsb);
+    int advanceWidth;
+    stbtt_GetCodepointHMetrics(&pen.font, ' ', &advanceWidth, 0);
     pen.x += advanceWidth * pen.fontScale;
 
     // TODO: check if any char delims >= 2
@@ -297,21 +420,30 @@ void writeInBBox(std::vector<unsigned char>& image, Pen& pen, std::string timest
 
     std::string wrappedLines;
     findOptimalFontScale(pen, wrappedLines);
-    //std::println("wrappedLines: {}", wrappedLines);
+    pen.reset(pen.bbox.topLeftX, pen.bbox.topLeftY); // TODO: fix call to findOptimalFontScale so that it doesn't modify pen's x and y val
+    std::vector<std::string> lines = split(wrappedLines, "\n");
+    
+    if (pen.textType == CREDITS)
+    {
+        pen.bbox.bottomRightY = static_cast<int>((SCREEN_HEIGHT + getLineHeight(pen.font, pen.fontScale)) * SCALE_MULTIPLIER);
+    }
+    else
+    {
+        int firstLineHeight = tallestGlyph(lines[0], pen);
+        //pen.y -= firstLineHeight; // shift baseline down just enough for this line's actual tallest glyph
+    }
 
-    pen.y = pen.bbox.topLeftY;
-    //std::println("wrappedLines split: {}", wrappedLines);
-    for (const std::string& line : split(wrappedLines, "\n"))
+    for (const std::string& line : lines)
     {
         pen.x = pen.bbox.topLeftX;
+        int lineHeight = tallestGlyph(line, pen);
+        pen.y -= lineHeight;
         for (const std::string& word : split(line, " "))
         {
             drawWord(image, word, pen);
         }
-        // move to the next line and continue drawing
-        int ascent, descent, lineGap;
-        stbtt_GetFontVMetrics(&pen.fonts.regular, &ascent, &descent, &lineGap);
-        pen.y += (ascent - descent + lineGap) * pen.fontScale;
+        pen.y += getLineHeight(pen.font, pen.fontScale) + lineHeight; // move to the next line and continue drawing
+        //pen.y += getLineHeight(pen.font, pen.fontScale); // move to the next line and continue drawing
     }
 }
 
@@ -319,8 +451,6 @@ void writeInBBox(std::vector<unsigned char>& image, Pen& pen, std::string timest
 void textToImage(Row row, bool includeCredits, Pen& pen)
 {
     std::vector<unsigned char> image(SCREEN_WIDTH * SCREEN_HEIGHT, BG_COLOR);
-
-    const float SCALE_MULTIPLIER = 0.99; // to constrain bboxes to make sure text fits
 
     Fonts fonts;
     initFont(std::string(PROJECT_ROOT) + "/fonts/Bookerly.ttf", fonts.regularBuf, fonts.regular);
@@ -332,6 +462,7 @@ void textToImage(Row row, bool includeCredits, Pen& pen)
     pen.fonts = fonts;
     pen.font = fonts.regular;
 
+    /* leave some room around the screen so that text isn't written right up to its edges.*/
     BoundingBox quoteBBox;
     quoteBBox.topLeftX =  static_cast<int>(std::floor(SCREEN_WIDTH - SCREEN_WIDTH * SCALE_MULTIPLIER));
     quoteBBox.topLeftY = static_cast<int>(std::floor(SCREEN_HEIGHT - SCREEN_HEIGHT * SCALE_MULTIPLIER));
@@ -347,13 +478,8 @@ void textToImage(Row row, bool includeCredits, Pen& pen)
         creditsBBox.bottomRightX = SCREEN_WIDTH;
         creditsBBox.bottomRightY = static_cast<int>(std::floor(SCREEN_HEIGHT * SCALE_MULTIPLIER));
         pen.bbox = creditsBBox;
-        //std::println("{}", pen.bbox.topLeftX);
-        //std::println("{}", pen.bbox.topLeftY);
-        //std::println("{}", pen.bbox.bottomRightX);
-        //std::println("{}", pen.bbox.bottomRightY);
-
-        // TODO: format credits properly 
-        pen.text = "—" + row.title + ", " + row.author;
+        pen.color = CREDIT_COLOR;
+        pen.text = "—" + row.title + ", " + row.author; // TODO: format credits properly 
         writeInBBox(image, pen);
         quoteBBox.bottomRightY = static_cast<int>(std::floor(pen.bbox.topLeftY * SCALE_MULTIPLIER));
     }
@@ -361,6 +487,7 @@ void textToImage(Row row, bool includeCredits, Pen& pen)
     pen.textType = QUOTE;
     pen.bbox = quoteBBox;
     pen.text = row.quote;
+    pen.color = QUOTE_COLOR;
     writeInBBox(image, pen, row.timestring);
     pen.reset(pen.bbox.topLeftX, pen.bbox.topLeftY);
 
@@ -369,14 +496,14 @@ void textToImage(Row row, bool includeCredits, Pen& pen)
 }
 
 int main() {
-    std::cout << "MAIN STARTED" << std::endl;  // temporary
     Pen drawing_pen;
     Row row;
-    row.time = "01:17";
-    row.timestring = "1:17";
+    row.time = "02:00";
+    row.timestring = "2 A.M.";
+    //row.quote = "Jessica heard the disturbance in the great hall, turned on the light beside her bed. The clock there had not been properly adjusted to local time, and she had to subtract twenty-one minutes to determine that it was about 2 A.M.";
     row.quote = "Jessica heard the disturbance in the great hall, turned on the light beside her bed. The clock there had not been properly adjusted to local time, and she had to subtract twenty-one minutes to determine that it was about 2 A.M.";
-    row.title = "The Road";
-    row.author = "Cormac McCarthy";
+    row.title = "Dune";
+    row.author = "Frank Herbert";
     // CSV Parser: https://github.com/ben-strasser/fast-cpp-csv-parser
     textToImage(row, true, drawing_pen);
     return 0;
