@@ -11,6 +11,8 @@
 #include <print>
 #include <string>
 
+static float SCALE_MULTIPLIER = 0.99; // to constrain bboxes to make sure text fits
+
 
 // Stores the (x,y) coordinate pairs of the top left and bottom right corners of a bounding box.
 struct BoundingBox {
@@ -20,6 +22,7 @@ struct BoundingBox {
     int bottomRightY = 0;
 };
 
+// Stores all of the fonts that may be used and their raw byte buffers.
 struct Fonts {
     std::vector<unsigned char> regularBuf;
     stbtt_fontinfo regular;
@@ -38,12 +41,64 @@ struct Fonts {
 };
 
 // Holds a row from the quotes CSV file.
+// Example:
+//  row.time = "23:00";
+//  row.timestring = "eleven";
+//  row.quote = "At eleven, when the movie let out, he returned to Wolcott.";
+//  row.title = "In Cold Blood";
+//  row.author = "Truman Capote";
 struct Row {
     std::string time;
     std::string timestring;
     std::string quote;
     std::string title;
     std::string author;
+};
+
+// Stores all delimiting characters to format one or more glyphs.
+//
+// `ITALIC`: Text wrapped with this delimiter is written using an italicized version of the font.
+//
+// `BOLD`: Text wrapped with this delimiter is written using a bolded version of the font.
+//  Note: This can be combined with the `ITALIC` delimiter to write text that is bold and italic.
+//
+// `TIMESTR`: The timestring part of the quote is automatically wrapped with this delimiter.
+//  Note: A timestring should never be manually wrapped in the quote CSV file because it is
+//      automatically found and wrapped when a quote is drawn.
+struct CharacterDelimiters {
+    std::string ITALIC  = "◻";  // U+25FB (White Medium Square)
+    std::string BOLD    = "◯";  // U+25EF (Large Circle)
+    std::string TIMESTR = "|";  // U+007C (Vertical Line)
+
+    std::vector<std::string> getCharDelims() const {
+        return { ITALIC, BOLD, TIMESTR };
+    }
+};
+
+// Stores delimiting characters to format one or more words.
+// 
+// `NEWLINE`: Insert a newline between the current and succeeding text. (Equivalent to pressing the
+//          enter/return key).
+// `DOUBLE_NEWLINE`: Insert two newlines between the current and succeeding text. (Equivalent to pressing
+//          the enter/return twice).
+struct WordDelimiters {
+    std::string NEWLINE         = "␤";  // U+2424 (Symbol For Newline)
+    std::string DOUBLE_NEWLINE  = "⇇";  // U+21C7 (Leftwards Paired Arrows
+
+    std::vector<std::string> getWordDelims() const {
+        return { NEWLINE, DOUBLE_NEWLINE };
+    }
+};
+
+// Defines a formatting delimiter and a variable to track how many of the delimiter have been seen in the text.
+//
+// character: The delmiting character (e.g. "◻").
+// count: How many times the character has been seen in the text.
+struct Delimiter {
+    std::string character;
+    int count = 0;
+
+    Delimiter(const std::string& c) : character(c) {}
 };
 
 // Tells the pen if it is writing a quote or a quote's credits.
@@ -64,7 +119,6 @@ struct Pen {
 };
 
 
-
 class Writer {
   public:
     // The image to write a quote on, represented as a bitmap.
@@ -74,19 +128,24 @@ class Writer {
     //
     // row: A single row from the CSV file.
     // includeCredits: `true` to write quote's author and title in the bottom right of the image, `false` to discard.
-    // pen: TODO: remove since it's a private struct
     //
     // Returns TODO: logic to switch between saving image and returning bitmap. 
     void getImage(Row row, bool includeCredits);
     
   private:  
     Pen pen;
-    Fonts fonts;
-    TextType textType = QUOTE; // is the text that is being written a quote or credits for a quote?
+    Row row;
     std::string text; // The text that the pen is writing.
+    TextType textType = QUOTE; // is the text that is being written a quote or credits for a quote?
+    Fonts fonts;
+    std::vector<Delimiter> charDelimiters = {
+        Delimiter(CharacterDelimiters().ITALIC),
+        Delimiter(CharacterDelimiters().BOLD),
+        Delimiter(CharacterDelimiters().TIMESTR),
+    };
     BoundingBox bbox; // An area that the pen must write inside of.
 
-    // Move the pen and set all delimiter counters to 0.
+    // Move the pen to some (x,y) coordinate and and set all delimiter counters to 0.
     void resetPen (float x_pos, float y_pos)
     {
         pen.x = x_pos;
@@ -94,57 +153,82 @@ class Writer {
         // TODO: reset all char delim counters to 0
     }
 
+
     // Write text inside the bounding box of an image.
     //
     // image: TODO: remove since it's a class var.
-    // pen: TODO: remove since it's a class struct.
     // timestr: Optional substring within a quote that contains the time. Only passed in if the text being written is a quote.
     void writeInBBox(std::vector<unsigned char>& image, std::string timestr = "");
+
+    // Find the indices where the timestring begins and ends in a quote.
+    //
+    // timestrBegin: output parameter. Index where the first time string delim is found in the text.
+    // timestrEnd: output parameter. Index where the second (last) time string delim is found in the text.
+    //
+    // Returns -1 if the timestring is not found, 0 on success.
+    int findTimestrIndices(size_t& timestrBegin, size_t& timestrEnd)
+    {
+        timestrBegin = row.quote.find(row.timestring);
+        if (timestrBegin == std::string::npos) {
+            return -1; // timestring not found
+        }
+        timestrEnd = timestrBegin + row.timestring.size();
+        return 0;
+    }
+
 
     // Draws a word onto the image, one glyph at a time.
     //
     // image: TODO: remove since it's a class var.
     // word: The word to be written.
-    // pen: TODO: remove since it's a class struct.
     void drawWord(std::vector<unsigned char>& image, std::string word);
+
 
     // Determines which font and color should be used to write a glyph. If the character is a delimiter, an empty string is returned.
     //
-    // c: The glyph (character) whose formatting is to be checked.
-    // pen: TODO: remove since it's a class struct.
-    int formatChar(int& c, Pen pen);
+    // pen: A pen.
+    // character: The character whose formatting is to be checked.
+    //
+    // Returns 
+    std::string formatChar(Pen& pen, std::string character);
+
 
     // Finds the maximum possible font scale (in font units) that can be used for a given bounding box and determiens how the text
     // should be wrapped to fit in the bbox horizontally.
     //
-    // pen: TODO: remove since it's a class struct.
     // wrappedLines: output parameter. Stores the text broken up with newline delimiters to fit in the bbox horizontally.
     //      If the text cannot fit (the optimal font scale is < `MIN_FONT_SCALE`), this stores an empty string.
     //
     // Returns the optimal font scale that is found, or 0 if the text cannot fit
     int findOptimalFontScale(std::string& wrappedLines);
 
-    // Helper to `find_optimal_font_size()`. Wraps text using a given font scale such that the text doesn't overflow past
+
+    // Helper to `findOptimalFontScale()`. Wraps text using a given font scale such that the text doesn't overflow past
     // the rightmost x coordinate of the bbox.
     //
-    // pen: A temporary pen that is used only in `find_optimal_font_size`.
+    // pen: A temporary pen that is created and destroyed in `findOptimalFontScale()`.
     // 
     // Returns the text to be written with newline delimiters if it fits. Otherwise, an empty string is returned.
     std::string wrapText(Pen& pen);
 
-    // Checks if a word needs to be moved onto a new line, either due to text wrapping or custom formatting.
+
+    // Helper to `wrapText()`. Checks if a word needs to be moved onto a new line, either due to text wrapping
+    // or custom formatting.
     //
+    // pen: A temporary pen that is created and destroyed in `findOptimalFontScale()`.
     // word: The word to be formatted.
     // lines: The text to be written onto an image.
     // wordLength: The length of the word in pixels.
-    // pen: A temp pen
     void formatWord(Pen& pen, std::string word, std::vector<std::string>& lines, const int& wordLength);
     
+
     // Finds the height of the tallest glyph in a string.
     //
     // line: The line of text to find the tallest glyph in.
-    // pen: TODO: remove since it's a class struct.
-    int tallestGlyph(const std::string& line, const Pen& pen);
+    //
+    // Returns the Y coordinate of the tallest glyph box.
+    int tallestGlyph(const std::string& line);
+
 
     // Calculates a font's recommended vertical spacing between two rows of text.
     //
@@ -162,6 +246,7 @@ class Writer {
         return static_cast<int>((ascent - descent + lineGap) * fontScale);
     }
 
+
     // Decodes a single Unicode codepoint from a UTF-8 encoded string, starting at the given byte offset.
     //
     // s: The UTF-8-encoded string to decode from.
@@ -174,6 +259,7 @@ class Writer {
     //
     // See the function's definition for more details.
     int decodeUTF8(const std::string& s, size_t i, int& numBytes);
+
 
     // Initalize a stb font
     //
@@ -191,6 +277,7 @@ class Writer {
         }
     }
 
+
     // Split a string into individual words using a delimiter.
     // Borrowed from https://stackoverflow.com/a/14266139.
     //
@@ -200,8 +287,5 @@ class Writer {
     // Returns a vector of the split string.
     std::vector<std::string> split(std::string s, const std::string& delimiter);
 };
-   
-
-int decodeUTF8(const std::string& s, size_t i, int& numBytes);
 
 #endif // WRITER_H_

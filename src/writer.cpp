@@ -1,6 +1,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#include <algorithm>
+
 #include "constants.hpp"
 #include "writer.hpp"
 
@@ -100,7 +102,7 @@ int Writer::decodeUTF8(const std::string& s, size_t i, int& numBytes)
 }
 
 
-int Writer::tallestGlyph(const std::string& line, const Pen& pen)
+int Writer::tallestGlyph(const std::string& line)
 {
     int maxHeight = 0;
     for (const std::string& word : split(line, " "))
@@ -120,22 +122,62 @@ int Writer::tallestGlyph(const std::string& line, const Pen& pen)
 }
 
 
+std::string Writer::formatChar(Pen& pen, std::string character)
+{
+    size_t italicCount = 0;
+    bool foundDelimiter = false;
+
+    for (Delimiter& delim : charDelimiters)
+    {
+        // move this check outside of for loop?
+        std::vector<std::string> wordDelims = WordDelimiters().getWordDelims();
+        if (std::find(wordDelims.begin(), wordDelims.end(), character) != wordDelims.end()) {
+            return ""; // character is a Word Delimiter. Ignore and left formatWord() deal with it.
+        }
+
+        if (character == delim.character)
+        {
+
+            delim.count += 1;
+            character = "";
+        }
+        if (delim.count == 1)
+        {
+            foundDelimiter = true;
+            if (delim.character == CharacterDelimiters().ITALIC)
+            {
+                italicCount = delim.count;
+                pen.font = fonts.italic;
+                pen.color = QUOTE_COLOR;
+            }
+            else if (delim.character == CharacterDelimiters().BOLD || delim.character == CharacterDelimiters().TIMESTR)
+            {
+                pen.font = (italicCount > 0) ? fonts.italicBold : fonts.bold;
+                pen.color = TIME_COLOR;
+            }
+        }
+        else if (delim.count >= 2)
+        {
+            pen.font = fonts.regular;
+            pen.color = (textType == QUOTE) ? QUOTE_COLOR : TIME_COLOR;
+        }
+    }
+    return character;
+}
+
+
 void Writer::formatWord(Pen& pen, std::string word, std::vector<std::string>& lines, const int& wordLength)
 {
     /* TODO: Add word formatting for delim chars*/
-    if (pen.x + wordLength > bbox.bottomRightX)
-    { /* Current word would go past right side of image. Put on next line. */
+    if (pen.x + wordLength > bbox.bottomRightX) { // Current word would go past right side of image. Put on next line.
         pen.x = bbox.topLeftX;
         pen.y += getLineHeight(pen.font, pen.fontScale);
         lines.push_back(word);
-    } 
-    else
-    {
+    }  else {
         if (lines.empty()) {
-            lines.push_back(word); // first word of the first line
-        }
-        else {
-            lines.back() += " " + word; // add the current word to the current line
+            lines.push_back(word); // first word overall, so no line to append to yet
+        } else {
+            lines.back() += " " + word; // add the current word to the current (last) line
         }
     }
 }
@@ -156,6 +198,13 @@ std::string Writer::wrapText(Pen& pen)
         {
             int numBytes;
             int codePoint = decodeUTF8(word, i, numBytes);
+
+            std::string currCharacter = formatChar(pen, word.substr(i, numBytes));
+            if (currCharacter.empty())
+            {
+                i += numBytes;
+                continue; // skip metrics if the character is a delimiter
+            }
 
             int advanceWidth, lsb;
             stbtt_GetCodepointHMetrics(&pen.font, codePoint, &advanceWidth, &lsb); 
@@ -184,7 +233,6 @@ std::string Writer::wrapText(Pen& pen)
         int lineHeight = getLineHeight(pen.font, pen.fontScale);
         if (pen.y + lineHeight > bbox.bottomRightY)
         { /* current wrapping writes past text's bbox. Need to reduce font size. */
-            //resetPen(bbox.topLeftX, bbox.topLeftY);
             pen.x = bbox.topLeftX;
             pen.y = bbox.topLeftY;
             return "";
@@ -195,10 +243,7 @@ std::string Writer::wrapText(Pen& pen)
     for (const auto& line : lines) {
         wrapped += line + "\n"; // e.g. ["It is", "12:00 P.M."] -> "It is\n12:00 P.M.\n"
     }
-
-    if (!wrapped.empty()) {
-        wrapped.pop_back(); // remove the extra '\n' at the end of the string
-    }
+    wrapped.pop_back(); // remove the extra '\n' at the end of the string
     return wrapped;
 }
 
@@ -218,13 +263,11 @@ int Writer::findOptimalFontScale(std::string& wrappedLines)
         
         std::string lines;
         lines = wrapText(tempPen);
-        if (!lines.empty())
-        { /* Text fits. try a larger font scale */
+        if (!lines.empty()) { //Text fits. Try a larger font scale
             optimalScale = mid;
             min = mid + 1;
             wrappedLines = lines;
-        }
-        else {
+        } else {
             max = mid - 1; // Text didn't fit
         }
     }
@@ -234,6 +277,7 @@ int Writer::findOptimalFontScale(std::string& wrappedLines)
         return 0;
     }
 
+    /* TODO: put in its own function? */
     float linesHeight = 0, longestLineWidth = 0;
     for (const std::string& line : split(wrappedLines, "\n"))
     {
@@ -261,12 +305,6 @@ int Writer::findOptimalFontScale(std::string& wrappedLines)
 }
 
 
-int Writer::formatChar(int& c, Pen pen)
-{
-    //TODO
-    return 1;
-}
-
 void Writer::drawWord(std::vector<unsigned char>& image, std::string word)
 {   
     for (size_t i = 0; i < word.length(); )
@@ -274,11 +312,11 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word)
         int numBytes;
         int codepoint = decodeUTF8(word, i, numBytes);
 
-        // TODO: format char
-        if (formatChar(codepoint, pen) == 0)
+        std::string currCharacter = formatChar(pen, word.substr(i, numBytes));
+        if (currCharacter.empty())
         {
             i += numBytes; 
-            continue;
+            continue;   
         }
 
         int advanceWidth; // how far the pen should move after drawing a glyph (in font units)
@@ -331,8 +369,10 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word)
         std::vector<unsigned char> glyphBuf(glyphWidth * glyphHeight, 0);
         stbtt_MakeCodepointBitmap(&pen.font, glyphBuf.data(), glyphWidth, glyphHeight, glyphWidth, pen.fontScale, pen.fontScale, codepoint);
         
-        for (int row = 0; row < glyphHeight; ++row) {
-            for (int col = 0; col < glyphWidth; ++col) {
+        for (int row = 0; row < glyphHeight; ++row)
+        {
+            for (int col = 0; col < glyphWidth; ++col)
+            {
                 int destX = static_cast<int>(drawX + col); // The rasterized glyph's x coordinate of the current pixel
                 int destY = static_cast<int>(drawY + row); // The rasterized glyph's y coordinate of the current pixel
 
@@ -344,18 +384,13 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word)
                     if (glyphPixel > 0) // only want non-background pixels
                     {
                         /**
-                         * alpha = (object's opacity * its pixel coverage)
-                            * an obj that is 60% opaque and covers 30% of a pixel's 
-                            * area has an alpha value of 18% in that pixel.
-                            * "alpha" and "opacity" are often synonomous.
-                         * use linear interpolation between two colors, weighted by
-                         * an alpha value to determine the pixel's color.
+                         * use linear interpolation between two colors, weighted by an alpha value to determine the pixel's color.
                          * Alpha compositing is generally: result = foreground * alpha + background * (1 - alpha)
-                            * alpha is usually normalized to [0, 1] but we are using 8-bit space here (TODO: reduce to 4-bit?)
-                            * so we use a range of [0, 255] instead. 
-                            * glyphPixel (0-255) plays the role of alpha * 255.
-                            * (255 - glyphPixel) plays the role of (1 - alpha * 255)
-                            * dividing the sum by 255 at the end normalizes it to [0, 255].
+                         * alpha is usually normalized to [0, 1] but we are using 8-bit space here (TODO: reduce to 4-bit?)
+                         * so we use a range of [0, 255] instead. 
+                         * glyphPixel (0-255) plays the role of alpha * 255.
+                         * (255 - glyphPixel) plays the role of (1 - alpha * 255)
+                         * dividing the sum by 255 at the end normalizes it to [0, 255].
                          */
                         int pixelIdx = destY * bbox.bottomRightX + destX; // this converts the 2D coords of the pixel into a 1D array index
                         int backgroundPixel = image[pixelIdx];
@@ -374,37 +409,56 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word)
     stbtt_GetCodepointHMetrics(&pen.font, ' ', &advanceWidth, 0);
     pen.x += advanceWidth * pen.fontScale;
 
-    // TODO: check if any char delims >= 2
+    for (Delimiter &delim : charDelimiters)
+    {
+        if (delim.count >= 2)
+        {
+            delim.count = 0;
+            pen.font = fonts.regular;
+        }
+    }
 }
 
 
 void Writer::writeInBBox(std::vector<unsigned char>& image, std::string timestr)
 {
+    // Wrap the timestring with "|" so that it can be found again when writing the quote.
+    // If the timestring isn't found, write an error message instead.
     if (textType == QUOTE && !timestr.empty())
     {
-        // TODO: check for timestr and wrap with '|'
+        size_t timestrBegin = 0, timestrEnd = 0;
+        if (findTimestrIndices(timestrBegin, timestrEnd) < 0)
+        {
+            std::println("Error: timestring is missing");
+            text = "Error: timestring is missing.";
+            row.timestring = "Error";
+            findTimestrIndices(timestrBegin, timestrEnd);
+        }
+
+        std::string delim = CharacterDelimiters().TIMESTR;
+        text = row.quote.substr(0, timestrBegin);
+        text += delim + row.quote.substr(timestrBegin, timestrEnd - timestrBegin) + delim;
+        text += row.quote.substr(timestrEnd);
     }
 
     std::string wrappedLines;
     int optimalScale = findOptimalFontScale(wrappedLines);
     if (optimalScale > 0) {
         pen.fontScale = stbtt_ScaleForPixelHeight(&pen.font, optimalScale);
-    }
-    else {
+    } else {
         std::println("Invalid font scale: {}", optimalScale);
     }
 
     resetPen(bbox.topLeftX, bbox.topLeftY); // TODO: fix call to findOptimalFontScale so that it doesn't modify pen's x and y val
-    std::vector<std::string> lines = split(wrappedLines, "\n");
-    
-    if (textType == CREDITS) { // prevent credit glyphs with descenders from being drawn past the bottom of the screen
+
+    if (textType == CREDITS) { // prevent credit glyphs with descenders from being drawn past the bottom of the screen (necessary?)
         bbox.bottomRightY = static_cast<int>((SCREEN_HEIGHT + getLineHeight(pen.font, pen.fontScale)) * SCALE_MULTIPLIER);
     }
 
-    for (const std::string& line : lines)
+    for (const std::string& line : split(wrappedLines, "\n"))
     {
+        int lineHeight = tallestGlyph(line);
         pen.x = bbox.topLeftX;
-        int lineHeight = tallestGlyph(line, pen);
         pen.y -= lineHeight;
 
         for (const std::string& word : split(line, " ")) {
@@ -417,19 +471,18 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::string timestr)
 
 void Writer::getImage(Row row, bool includeCredits)
 {
+    this->row = row;
     std::vector<unsigned char> image(SCREEN_WIDTH * SCREEN_HEIGHT, BG_COLOR);
 
-    Fonts fonts;
     initFont(std::string(PROJECT_ROOT) + "/share/fonts/Bookerly.ttf", fonts.regularBuf, fonts.regular);
     initFont(std::string(PROJECT_ROOT) + "/share/fonts/Bookerly-Italic.ttf", fonts.italicBuf, fonts.italic);
     initFont(std::string(PROJECT_ROOT) + "/share/fonts/Bookerly-Bold.ttf", fonts.boldBuf, fonts.bold);
     initFont(std::string(PROJECT_ROOT) + "/share/fonts/Bookerly-Bold-Italic.ttf", fonts.italicBoldBuf, fonts.italicBold);
     initFont(std::string(PROJECT_ROOT) + "/share/fonts/Bookerly-Bold.ttf", fonts.creditBuf, fonts.credit);
 
-    fonts = fonts;
     pen.font = fonts.regular;
 
-    /* leave some room around the screen so that text isn't written right up to its edges.*/
+    /* leave some room around the screen so that text isn't written right up to its edges. */
     BoundingBox quoteBBox;
     quoteBBox.topLeftX =  static_cast<int>(std::floor(SCREEN_WIDTH - SCREEN_WIDTH * SCALE_MULTIPLIER));
     quoteBBox.topLeftY = static_cast<int>(std::floor(SCREEN_HEIGHT - SCREEN_HEIGHT * SCALE_MULTIPLIER));
@@ -448,9 +501,6 @@ void Writer::getImage(Row row, bool includeCredits)
         pen.color = CREDIT_COLOR;
         text = "—" + row.title + ", " + row.author; // TODO: format credits properly 
         writeInBBox(image);
-        //std::string outPath = "out.png"; // TODO replace with logic to properly name image files.
-        //stbi_write_png(outPath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, image.data(), bbox.bottomRightX);
-        //return;
         quoteBBox.bottomRightY = static_cast<int>(std::floor(bbox.topLeftY * SCALE_MULTIPLIER));
     }
 
@@ -466,23 +516,23 @@ void Writer::getImage(Row row, bool includeCredits)
 }
 
 int main() {
-    //Pen drawing_pen;
     Row row;
     
+    /*
     row.time = "02:00";
     row.timestring = "2 A.M.";
     row.quote = "Jessica heard the disturbance in the great hall, turned on the light beside her bed. The clock there had not been properly adjusted to local time, and she had to subtract twenty-one minutes to determine that it was about 2 A.M.";
     row.title = "Dune";
     row.author = "Frank Herbert";
+    */
     
-   
-    /*
+    ///*
     row.time = "23:00";
     row.timestring = "eleven";
     row.quote = "At eleven, when the movie let out, he returned to Wolcott.";
     row.title = "In Cold Blood";
     row.author = "Truman Capote";
-    */
+    //*/
 
     /*
     row.time = "09:00";
@@ -495,6 +545,5 @@ int main() {
     // CSV Parser: https://github.com/ben-strasser/fast-cpp-csv-parser (maybe just use std::ifstream and read line by line?)
     Writer writer;
     writer.getImage(row, true);
-    //getImage(row, true, drawing_pen);
     return 0;
 }
