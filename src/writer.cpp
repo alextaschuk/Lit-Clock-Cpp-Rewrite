@@ -168,8 +168,17 @@ std::string Writer::formatChar(Pen& pen, std::string character)
 
 void Writer::formatWord(Pen& pen, std::string word, std::vector<std::string>& lines, const int& wordLength)
 {
-    /* TODO: Add word formatting for delim chars*/
-    if (pen.x + wordLength > bbox.bottomRightX) { // Current word would go past right side of image. Put on next line.
+    bool addLine = false;
+    if (word.contains(WordDelimiters().NEWLINE)) {
+        addLine = true;
+    } else if (word.contains(WordDelimiters().DOUBLE_NEWLINE)) {
+        addLine = true;
+        pen.x = bbox.topLeftX;
+        pen.y += getLineHeight(pen.font, pen.fontScale);
+        lines.push_back("");
+    }
+
+    if (pen.x + wordLength > bbox.bottomRightX || addLine) { // Current word would go past right side of image. Put on next line.
         pen.x = bbox.topLeftX;
         pen.y += getLineHeight(pen.font, pen.fontScale);
         lines.push_back(word);
@@ -526,21 +535,21 @@ int main() {
     row.author = "Frank Herbert";
     */
     
-    ///*
+    /*
     row.time = "23:00";
     row.timestring = "eleven";
     row.quote = "At eleven, when the movie let out, he returned to Wolcott.";
     row.title = "In Cold Blood";
     row.author = "Truman Capote";
-    //*/
+    */
 
-    /*
+    ///*
     row.time = "09:00";
     row.timestring = "At nine";
     row.quote = "Opening his window, Aschenbach thought he could smell the foul stench of the lagoon. A sudden despondency came over him. He considered leaving then and there. Once, years before, after weeks of a beautiful spring, he had been visited by this sort of weather and it so affected his health he had been obliged to flee. Was not the same listless fever setting in? The pressure in the temples, the heavy eyelids? Changing hotels again would be a nuisance, but if the wind failed to shift he could not possibly remain here. To be on the safe side, he did not unpack everything. At nine he went to breakfast in the specially designated buffet between the lobby and the dining room.";
     row.title = "Death in Venice";
     row.author = "Thomas Mann";
-    */
+    //*/
 
     // CSV Parser: https://github.com/ben-strasser/fast-cpp-csv-parser (maybe just use std::ifstream and read line by line?)
     Writer writer;
