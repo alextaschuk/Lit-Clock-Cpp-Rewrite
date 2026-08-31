@@ -1,0 +1,6 @@
+build/
+extern/
+
+.DS_Store
+
+.vscode
