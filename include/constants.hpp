@@ -1,6 +1,7 @@
-#ifndef TCB_H
-#define TCB_H
+#ifndef CONSTANTS_H_
+#define CONSTANTS_H_
 #pragma once // prevent contents of header from being read more than once if included more than once
+
 #include <string>
 
 const int& SCREEN_WIDTH = 800;
@@ -20,4 +21,4 @@ const bool& INCLUDE_CREDITS = true;
 const float& MIN_FONT_SCALE = 12;
 const float& MAX_FONT_SCALE = 150;
 
-#endif
+#endif // CONSTANTS_H_
