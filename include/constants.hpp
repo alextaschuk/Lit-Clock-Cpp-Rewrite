@@ -1,5 +1,3 @@
-#ifndef CONSTANTS_H_
-#define CONSTANTS_H_
 #pragma once // prevent contents of header from being read more than once if included more than once
 
 #include <string>
@@ -12,12 +10,10 @@ const int& QUOTE_COLOR = 128;
 const int& TIME_COLOR = 0;
 const int& CREDIT_COLOR = 0;
 
-const std::string& QUOTES_PATH = "quotes.csv";
-const std::string& IMAGES_PATH = "images/";
+const std::string& QUOTES_PATH = "share/quotes.csv";
+const std::string& IMAGE_PATH = "images/";
 const std::string& IMAGE_FORMAT = "bmp";
 const bool& INCLUDE_CREDITS = true;
 
 const float& MIN_FONT_SCALE = 12;
 const float& MAX_FONT_SCALE = 150;
-
-#endif // CONSTANTS_H_
