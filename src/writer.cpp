@@ -2,6 +2,12 @@
 #include "stb_image_write.h"
 
 #include <algorithm>
+#include <unordered_map>
+#include <filesystem>
+#include <cctype>
+
+#include <chrono>
+#include <iostream>
 
 #include "constants.hpp"
 #include "writer.hpp"
@@ -124,20 +130,18 @@ int Writer::tallestGlyph(const std::string& line)
 
 std::string Writer::formatChar(Pen& pen, std::string character)
 {
+    // skip if character is a WordDelimiter.
+    std::vector<std::string> wordDelims = WordDelimiters().getWordDelims();
+    if (std::find(wordDelims.begin(), wordDelims.end(), character) != wordDelims.end()) {
+        return "";
+    }
+
     size_t italicCount = 0;
     bool foundDelimiter = false;
-
     for (Delimiter& delim : charDelimiters)
     {
-        // move this check outside of for loop?
-        std::vector<std::string> wordDelims = WordDelimiters().getWordDelims();
-        if (std::find(wordDelims.begin(), wordDelims.end(), character) != wordDelims.end()) {
-            return ""; // character is a Word Delimiter. Ignore and left formatWord() deal with it.
-        }
-
         if (character == delim.character)
         {
-
             delim.count += 1;
             character = "";
         }
@@ -209,8 +213,7 @@ std::string Writer::wrapText(Pen& pen)
             int codePoint = decodeUTF8(word, i, numBytes);
 
             std::string currCharacter = formatChar(pen, word.substr(i, numBytes));
-            if (currCharacter.empty())
-            {
+            if (currCharacter.empty()) {
                 i += numBytes;
                 continue; // skip metrics if the character is a delimiter
             }
@@ -227,7 +230,6 @@ std::string Writer::wrapText(Pen& pen)
         { // A single word cannot be longer than the bbox's width
             pen.x = bbox.topLeftX;
             pen.y = bbox.topLeftY;
-            //resetPen(bbox.topLeftX, bbox.topLeftY);
             return "";
         }
 
@@ -401,7 +403,7 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word)
                          * (255 - glyphPixel) plays the role of (1 - alpha * 255)
                          * dividing the sum by 255 at the end normalizes it to [0, 255].
                          */
-                        int pixelIdx = destY * bbox.bottomRightX + destX; // this converts the 2D coords of the pixel into a 1D array index
+                        int pixelIdx = destY * SCREEN_WIDTH + destX; // this converts the 2D coords of the pixel into a 1D array index
                         int backgroundPixel = image[pixelIdx];
                         image[pixelIdx] = (pen.color * glyphPixel + backgroundPixel * (255 - glyphPixel)) / 255;
                     }
@@ -429,25 +431,23 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word)
 }
 
 
-void Writer::writeInBBox(std::vector<unsigned char>& image, std::string timestr)
+void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<std::string, std::string> row)
 {
     // Wrap the timestring with "|" so that it can be found again when writing the quote.
     // If the timestring isn't found, write an error message instead.
-    if (textType == QUOTE && !timestr.empty())
+    if (textType == QUOTE && !row["timestring"].empty())
     {
         size_t timestrBegin = 0, timestrEnd = 0;
-        if (findTimestrIndices(timestrBegin, timestrEnd) < 0)
-        {
-            std::println("Error: timestring is missing");
-            text = "Error: timestring is missing.";
-            row.timestring = "Error";
-            findTimestrIndices(timestrBegin, timestrEnd);
+        if (findTimestrIndices(row, timestrBegin, timestrEnd) < 0) {
+            std::string msg = std::format("time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
+            std::println("Error: {}", msg);
+            text = std::format("|Error| {}", msg);
+        } else {
+            std::string delim = CharacterDelimiters().TIMESTR;
+            text = row["quote"].substr(0, timestrBegin);
+            text += delim + row["quote"].substr(timestrBegin, timestrEnd - timestrBegin) + delim;
+            text += row["quote"].substr(timestrEnd);
         }
-
-        std::string delim = CharacterDelimiters().TIMESTR;
-        text = row.quote.substr(0, timestrBegin);
-        text += delim + row.quote.substr(timestrBegin, timestrEnd - timestrBegin) + delim;
-        text += row.quote.substr(timestrEnd);
     }
 
     std::string wrappedLines;
@@ -478,16 +478,19 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::string timestr)
 }
 
 
-void Writer::getImage(Row row, bool includeCredits)
+std::vector<unsigned char> Writer::getImage(std::unordered_map<std::string, std::string> row, bool includeCredits)
 {
-    this->row = row;
     std::vector<unsigned char> image(SCREEN_WIDTH * SCREEN_HEIGHT, BG_COLOR);
 
-    initFont(std::string(PROJECT_ROOT) + "/share/fonts/Bookerly.ttf", fonts.regularBuf, fonts.regular);
-    initFont(std::string(PROJECT_ROOT) + "/share/fonts/Bookerly-Italic.ttf", fonts.italicBuf, fonts.italic);
-    initFont(std::string(PROJECT_ROOT) + "/share/fonts/Bookerly-Bold.ttf", fonts.boldBuf, fonts.bold);
-    initFont(std::string(PROJECT_ROOT) + "/share/fonts/Bookerly-Bold-Italic.ttf", fonts.italicBoldBuf, fonts.italicBold);
-    initFont(std::string(PROJECT_ROOT) + "/share/fonts/Bookerly-Bold.ttf", fonts.creditBuf, fonts.credit);
+    try {
+        initFont(projectPath("/share/fonts/Bookerly.ttf"), fonts.regularBuf, fonts.regular);
+        initFont(projectPath("/share/fonts/Bookerly-Italic.ttf"), fonts.italicBuf, fonts.italic);
+        initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.boldBuf, fonts.bold);
+        initFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), fonts.italicBoldBuf, fonts.italicBold);
+        initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.creditBuf, fonts.credit);
+    } catch (const std::runtime_error) {
+        std::println("Error: Failed to initialize fonts.");
+    }
 
     pen.font = fonts.regular;
 
@@ -508,51 +511,114 @@ void Writer::getImage(Row row, bool includeCredits)
         creditsBBox.bottomRightY = static_cast<int>(std::floor(SCREEN_HEIGHT * SCALE_MULTIPLIER));
         bbox = creditsBBox;
         pen.color = CREDIT_COLOR;
-        text = "—" + row.title + ", " + row.author; // TODO: format credits properly 
-        writeInBBox(image);
+        text = "—" + row["title"] + ", " + WordDelimiters().NEWLINE + row["author"];
+        writeInBBox(image, row);
         quoteBBox.bottomRightY = static_cast<int>(std::floor(bbox.topLeftY * SCALE_MULTIPLIER));
     }
 
     textType = QUOTE;
     bbox = quoteBBox;
-    text = row.quote;
+    text = row["quote"];
     pen.color = QUOTE_COLOR;
-    writeInBBox(image, row.timestring);
+    writeInBBox(image, row);
     resetPen(bbox.topLeftX, bbox.topLeftY);
 
-    std::string outPath = "out.png"; // TODO replace with logic to properly name image files.
-    stbi_write_png(outPath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, image.data(), bbox.bottomRightX);
+    return image;
+}
+
+// Saves all quote images to an `images/` directory.
+//
+// Each row in the CSV is parsed to create an image of each quote.
+void saveImages(Writer &writer)
+{
+    std::unordered_map<std::string, std::string> row = 
+    {
+        {"time", ""},
+        {"timestring", ""},
+        {"quote", ""},
+        {"title", ""},
+        {"author", ""},
+    };
+
+    std::ifstream quoteFile(projectPath(QUOTES_PATH));
+    if (!quoteFile.is_open())
+    {
+        std::println("Error: Failed to open quotes file.");
+        return;
+    }
+
+    std::string line;
+    std::getline(quoteFile, line); // skip the header row
+    
+    std::string previousTime = "00:00";
+    int imgNum = -1;
+    size_t quoteCount = 0;
+
+    try { // make an images directory if one doesn't exist yet
+        std::filesystem::create_directories(projectPath("images"));
+    } catch (const std::filesystem::filesystem_error& e) {
+        std::println("Error: Failed to make images/ directory");
+    }
+
+    while (std::getline(quoteFile, line))
+    {
+        quoteCount++;
+        std::vector<std::string> splitRow = Writer::split(line, CharacterDelimiters().TIMESTR);
+        if (splitRow.size() != 5) {
+            std::println("Error: Row {} is missing a column.", quoteCount);
+            continue;
+        }
+
+        row["time"]       = splitRow[0];
+        row["timestring"] = splitRow[1];
+        row["quote"]      = splitRow[2];
+        row["title"]      = splitRow[3];
+        row["author"]     = splitRow[4];
+
+        if (row["time"] == previousTime) {
+            imgNum++;
+        } else {
+            std::string currTime = row["time"];
+            int prevMin = std::stoi(previousTime.substr(3));
+            int currMin = std::stoi(currTime.substr(3));
+
+            if ((currMin - 1 != prevMin) && (previousTime.substr(3) != "59"))
+            {
+                int missingMin = prevMin + 1;
+                std::string missingTime = std::format("{}{:02}", previousTime.substr(0, 2), missingMin);
+                std::println("Error: Missing or out-of-order quote for {}", missingTime);
+            }
+
+            imgNum = 0;
+            previousTime = currTime;
+        }
+
+        std::string time = row["time"].replace(2, 1, "");
+        std::string filepath = projectPath(IMAGE_PATH + "quote_" + time + "_" + std::to_string(imgNum) + "." + IMAGE_FORMAT);
+        std::vector<unsigned char> imgOut = writer.getImage(row, true);
+
+        if (IMAGE_FORMAT == "bmp") {
+            stbi_write_bmp(filepath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, imgOut.data());
+        } else if (IMAGE_FORMAT == "png") {
+            stbi_write_png(filepath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, imgOut.data(), SCREEN_WIDTH);
+        } else {
+            std::println("Error: {} is an invalid image type", IMAGE_FORMAT);
+        }
+
+        std::string progressBar = "Creating images... " + std::to_string(quoteCount);
+        std::cout << progressBar << '\r' << std::flush;
+    }
+    quoteFile.close();
 }
 
 int main() {
-    Row row;
-    
-    /*
-    row.time = "02:00";
-    row.timestring = "2 A.M.";
-    row.quote = "Jessica heard the disturbance in the great hall, turned on the light beside her bed. The clock there had not been properly adjusted to local time, and she had to subtract twenty-one minutes to determine that it was about 2 A.M.";
-    row.title = "Dune";
-    row.author = "Frank Herbert";
-    */
-    
-    /*
-    row.time = "23:00";
-    row.timestring = "eleven";
-    row.quote = "At eleven, when the movie let out, he returned to Wolcott.";
-    row.title = "In Cold Blood";
-    row.author = "Truman Capote";
-    */
+    auto start = std::chrono::high_resolution_clock::now();
 
-    ///*
-    row.time = "09:00";
-    row.timestring = "At nine";
-    row.quote = "Opening his window, Aschenbach thought he could smell the foul stench of the lagoon. A sudden despondency came over him. He considered leaving then and there. Once, years before, after weeks of a beautiful spring, he had been visited by this sort of weather and it so affected his health he had been obliged to flee. Was not the same listless fever setting in? The pressure in the temples, the heavy eyelids? Changing hotels again would be a nuisance, but if the wind failed to shift he could not possibly remain here. To be on the safe side, he did not unpack everything. At nine he went to breakfast in the specially designated buffet between the lobby and the dining room.";
-    row.title = "Death in Venice";
-    row.author = "Thomas Mann";
-    //*/
-
-    // CSV Parser: https://github.com/ben-strasser/fast-cpp-csv-parser (maybe just use std::ifstream and read line by line?)
     Writer writer;
-    writer.getImage(row, true);
+    saveImages(writer);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Elapsed: " << elapsed.count() << " seconds" << std::endl;
     return 0;
 }

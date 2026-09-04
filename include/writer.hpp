@@ -1,5 +1,4 @@
-#ifndef WRITER_H_
-#define WRITER_H_
+#pragma once
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
@@ -10,6 +9,8 @@
 #include <iostream>
 #include <print>
 #include <string>
+
+#include "utils.hpp"
 
 static float SCALE_MULTIPLIER = 0.99; // to constrain bboxes to make sure text fits
 
@@ -40,20 +41,6 @@ struct Fonts {
     stbtt_fontinfo credit;
 };
 
-// Holds a row from the quotes CSV file.
-// Example:
-//  row.time = "23:00";
-//  row.timestring = "eleven";
-//  row.quote = "At eleven, when the movie let out, he returned to Wolcott.";
-//  row.title = "In Cold Blood";
-//  row.author = "Truman Capote";
-struct Row {
-    std::string time;
-    std::string timestring;
-    std::string quote;
-    std::string title;
-    std::string author;
-};
 
 // Stores all delimiting characters to format one or more glyphs.
 //
@@ -81,6 +68,7 @@ struct CharacterDelimiters {
 //          enter/return key).
 // `DOUBLE_NEWLINE`: Insert two newlines between the current and succeeding text. (Equivalent to pressing
 //          the enter/return twice).
+// TODO: Just use \n for both
 struct WordDelimiters {
     std::string NEWLINE         = "␤";  // U+2424 (Symbol For Newline)
     std::string DOUBLE_NEWLINE  = "⇇";  // U+21C7 (Leftwards Paired Arrows
@@ -115,26 +103,35 @@ struct Pen {
     short int color = 128;
     float x = 0; // X coordinate of the pen's position on the image.
     float y = 0; // Y coordinate of the pen's position on the image.
-    // TODO: character delimiters
 };
 
 
 class Writer {
   public:
+    BoundingBox bbox; // An area that the pen must write inside of.
+    
     // The image to write a quote on, represented as a bitmap.
-    std::vector<unsigned char> image;
+    //std::vector<unsigned char> image;
 
     // Generate an image of a single quote.
     //
     // row: A single row from the CSV file.
     // includeCredits: `true` to write quote's author and title in the bottom right of the image, `false` to discard.
     //
-    // Returns TODO: logic to switch between saving image and returning bitmap. 
-    void getImage(Row row, bool includeCredits);
+    // Returns a bitmap of the image.
+    std::vector<unsigned char> getImage(std::unordered_map<std::string, std::string> row, bool includeCredits);
+
+    // Split a string into individual words using a delimiter.
+    // Borrowed from https://stackoverflow.com/a/14266139.
+    //
+    // s: The string to split from.
+    // delimiter: A substring of `s` to split the string with.
+    //
+    // Returns a vector of the split string.
+    static std::vector<std::string> split(std::string s, const std::string& delimiter);
     
   private:  
     Pen pen;
-    Row row;
     std::string text; // The text that the pen is writing.
     TextType textType = QUOTE; // is the text that is being written a quote or credits for a quote?
     Fonts fonts;
@@ -143,53 +140,53 @@ class Writer {
         Delimiter(CharacterDelimiters().BOLD),
         Delimiter(CharacterDelimiters().TIMESTR),
     };
-    BoundingBox bbox; // An area that the pen must write inside of.
 
     // Move the pen to some (x,y) coordinate and and set all delimiter counters to 0.
     void resetPen (float x_pos, float y_pos)
     {
         pen.x = x_pos;
         pen.y = y_pos;
-        // TODO: reset all char delim counters to 0
+        for (Delimiter& d : charDelimiters) { d.count = 0; }
     }
 
 
     // Write text inside the bounding box of an image.
     //
-    // image: TODO: remove since it's a class var.
+    // image: Bitmap of the image to write on.
     // timestr: Optional substring within a quote that contains the time. Only passed in if the text being written is a quote.
-    void writeInBBox(std::vector<unsigned char>& image, std::string timestr = "");
+    void writeInBBox(std::vector<unsigned char>& image, std::unordered_map<std::string, std::string> row);
 
     // Find the indices where the timestring begins and ends in a quote.
     //
+    // row: A row from the CSV file.
     // timestrBegin: output parameter. Index where the first time string delim is found in the text.
     // timestrEnd: output parameter. Index where the second (last) time string delim is found in the text.
     //
     // Returns -1 if the timestring is not found, 0 on success.
-    int findTimestrIndices(size_t& timestrBegin, size_t& timestrEnd)
+    int findTimestrIndices(std::unordered_map<std::string, std::string> row, size_t& timestrBegin, size_t& timestrEnd)
     {
-        timestrBegin = row.quote.find(row.timestring);
+        timestrBegin = toLower(row["quote"]).find(toLower(row["timestring"]));
         if (timestrBegin == std::string::npos) {
             return -1; // timestring not found
         }
-        timestrEnd = timestrBegin + row.timestring.size();
+        timestrEnd = timestrBegin + row["timestring"].size();
         return 0;
     }
 
 
     // Draws a word onto the image, one glyph at a time.
     //
-    // image: TODO: remove since it's a class var.
+    // image: Bitmap of the image to write on.
     // word: The word to be written.
     void drawWord(std::vector<unsigned char>& image, std::string word);
 
 
-    // Determines which font and color should be used to write a glyph. If the character is a delimiter, an empty string is returned.
+    // Determines which font and color should be used to write a character. If the character is a delimiter, an empty string is returned.
     //
-    // pen: A pen.
+    // pen: A pen to track changes to the character's font and color.
     // character: The character whose formatting is to be checked.
     //
-    // Returns 
+    // Returns an empty string if `character` is a `CharacterDelimiter` or a `WordDelimiter`. Otherwise `character` is returned. 
     std::string formatChar(Pen& pen, std::string character);
 
 
@@ -261,7 +258,7 @@ class Writer {
     int decodeUTF8(const std::string& s, size_t i, int& numBytes);
 
 
-    // Initalize a stb font
+    // Initalize a stb font.
     //
     // fontPath: File path to a TrueType or OpenType file.
     // outBuf: output parameter. A byte buffer of the font file. 
@@ -269,23 +266,13 @@ class Writer {
     void initFont(const std::string& fontPath, std::vector<unsigned char>& outBuf, stbtt_fontinfo& outFont)
     {
         std::ifstream fontStream(fontPath, std::ios::binary); // read the entire font file into a buffer
-        if (!fontStream) { throw std::runtime_error("Failed to open font file: " + fontPath); }
+        if (!fontStream) {
+            throw std::runtime_error("Failed to open font file: " + fontPath);
+        }
 
         outBuf = std::vector<unsigned char>(std::istreambuf_iterator<char>(fontStream), {});
         if (!stbtt_InitFont(&outFont, outBuf.data(), 0)) {
             throw std::runtime_error("stbtt_InitFont failed.");
         }
     }
-
-
-    // Split a string into individual words using a delimiter.
-    // Borrowed from https://stackoverflow.com/a/14266139.
-    //
-    // s: The string to split from.
-    // delimiter: A substring of `s` to split the string with.
-    //
-    // Returns a vector of the split string.
-    std::vector<std::string> split(std::string s, const std::string& delimiter);
 };
-
-#endif // WRITER_H_
