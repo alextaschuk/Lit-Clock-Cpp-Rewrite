@@ -170,7 +170,7 @@ void Writer::formatWord(Pen& pen, std::string word, std::vector<std::string>& li
     }
 
     if (pen.x + wordLength > bbox.bottomRightX || addLine)
-    { // Current word would go past right side of image. Put on next line.
+    { /* Current word would go past right side of image. Put on next line. */
         pen.x = bbox.topLeftX;
         pen.y += getLineHeight(pen.font, pen.fontScale);
         lines.push_back(word);
@@ -211,21 +211,19 @@ void Writer::resizeCreditBbox(const std::string& wrappedLines)
 
     bbox.topLeftX = bbox.bottomRightX - longestLineWidth;
     bbox.topLeftY = bbox.bottomRightY - linesHeight;
-
-    // prevent credit glyphs with descenders from being drawn past the bottom of the screen (necessary?)
-    // bbox.bottomRightY = static_cast<int>((SCREEN_HEIGHT + getLineHeight(pen.font, pen.fontScale)) * SCALE_MULTIPLIER);
 }
 
 
 std::string Writer::wrapText(Pen& pen)
 {
-    std::vector<std::string> lines; // store wrapped text (e.g. ["this is a line", "this is another"])
     pen.x = bbox.topLeftX;
     pen.y = bbox.topLeftY;
 
-    for (const std::string& word : split(text, " "))
+    std::vector<std::string> words = split(text, " ");
+    std::vector<std::string> lines; // stores wrapped lines (e.g. ["this  is a line", "this is another"])
+    for (size_t i = 0; i < words.size(); ++i)
     {
-        /* Get the length of the word */
+        const std::string& word = words[i];
         float wordLengthF = 0.0f;
         int wordLength = 0;
         for (size_t i = 0; i < word.size(); )
@@ -254,12 +252,15 @@ std::string Writer::wrapText(Pen& pen)
             return "";
         }
 
-        // add the length of a space after each word
-        int advanceWidth;
-        stbtt_GetCodepointHMetrics(&pen.font, ' ', &advanceWidth, 0); 
-        wordLength += advanceWidth * pen.fontScale;
+        // add the length of a space after each word (except for the last)
+        if (i != words.size() - 1) 
+        {
+            int advanceWidth;
+            stbtt_GetCodepointHMetrics(&pen.font, ' ', &advanceWidth, 0); 
+            wordLength += advanceWidth * pen.fontScale;
+        }
+        
         formatWord(pen, word, lines, wordLength);
-
         pen.x += wordLength;
 
         int lineHeight = getLineHeight(pen.font, pen.fontScale);
@@ -589,7 +590,7 @@ void saveImages(Writer &writer)
 
         std::string time = row["time"].replace(2, 1, "");
         std::string filepath = projectPath(IMAGE_PATH + "quote_" + time + "_" + std::to_string(imgNum) + "." + IMAGE_FORMAT);
-        std::vector<unsigned char> imgOut = writer.getImage(row, true);
+        std::vector<unsigned char> imgOut = writer.getImage(row, INCLUDE_CREDITS);
 
         if (IMAGE_FORMAT == "bmp") {
             stbi_write_bmp(filepath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, imgOut.data());
