@@ -101,8 +101,8 @@ struct Pen {
     stbtt_fontinfo font;
     float fontScale; // value used to convert something from font units to pixel units
     short int color = 128;
-    float x = 0; // X coordinate of the pen's position on the image.
-    float y = 0; // Y coordinate of the pen's position on the image.
+    int x = 0; // X coordinate of the pen's position on the image.
+    int y = 0; // Y coordinate of the pen's position on the image.
 };
 
 
@@ -120,15 +120,6 @@ class Writer {
     //
     // Returns a bitmap of the image.
     std::vector<unsigned char> getImage(std::unordered_map<std::string, std::string> row, bool includeCredits);
-
-    // Split a string into individual words using a delimiter.
-    // Borrowed from https://stackoverflow.com/a/14266139.
-    //
-    // s: The string to split from.
-    // delimiter: A substring of `s` to split the string with.
-    //
-    // Returns a vector of the split string.
-    static std::vector<std::string> split(std::string s, const std::string& delimiter);
     
   private:  
     Pen pen;
@@ -142,7 +133,7 @@ class Writer {
     };
 
     // Move the pen to some (x,y) coordinate and and set all delimiter counters to 0.
-    void resetPen (float x_pos, float y_pos)
+    void resetPen (int x_pos, int y_pos)
     {
         pen.x = x_pos;
         pen.y = y_pos;
@@ -165,6 +156,9 @@ class Writer {
     // Returns -1 if the timestring is not found, 0 on success.
     int findTimestrIndices(std::unordered_map<std::string, std::string> row, size_t& timestrBegin, size_t& timestrEnd)
     {
+        if (row["timestring"].empty()) {
+            return -1;
+        }
         timestrBegin = toLower(row["quote"]).find(toLower(row["timestring"]));
         if (timestrBegin == std::string::npos) {
             return -1; // timestring not found
@@ -197,7 +191,7 @@ class Writer {
     //      If the text cannot fit (the optimal font scale is < `MIN_FONT_SCALE`), this stores an empty string.
     //
     // Returns the optimal font scale that is found, or 0 if the text cannot fit
-    int findOptimalFontScale(std::string& wrappedLines);
+    void findOptimalFontScale(std::string& wrappedLines);
 
 
     // Helper to `findOptimalFontScale()`. Wraps text using a given font scale such that the text doesn't overflow past
@@ -219,12 +213,15 @@ class Writer {
     void formatWord(Pen& pen, std::string word, std::vector<std::string>& lines, const int& wordLength);
     
 
-    // Finds the height of the tallest glyph in a string.
+    // Finds the vertical extent of the tallest glyph's ascender in a line of text, measured as pixels above the baseline.
     //
-    // line: The line of text to find the tallest glyph in.
+    // Rasterizes each character in the line, tracking the smallest top-left Y offset seen (glyphs are measured relative to
+    // their baseline, so an offset of -n pixels means n pixels above the baseline).
     //
-    // Returns the Y coordinate of the tallest glyph box.
-    int tallestGlyph(const std::string& line);
+    // line: A single line of text, with no newline characters.
+    //
+    // Returns the top-left Y coordinate of the tallest (most negative) glyph box, or 0 if the line is empty.
+    int maxAscender(const std::string& line);
 
 
     // Calculates a font's recommended vertical spacing between two rows of text.
@@ -242,6 +239,18 @@ class Writer {
         stbtt_GetFontVMetrics(&font, &ascent, &descent, &lineGap);
         return static_cast<int>((ascent - descent + lineGap) * fontScale);
     }
+
+    // Shrinks the credits bbox to fit tightly around its text, allowing the quote bbox to be enlarged and fill the blank space.
+    //
+    // Should be called after the optimal font scale for the credits text has been applied to `pen`, and after that text has been
+    // wrapped (see `findOptimalFontScale` / `wrapText`). Measures the actual rendered width & height of `wrappedLines`
+    // at the credits font scale and uses it to move the top-left corner of the credits bbox's inward so that the bbox's width and
+    // height match the credits text's actual width and height.
+    //
+    // wrappedLines: The credits text, already wrapped with newline delimiters, measured at `pen`'s current font and font scale.
+    //
+    // Mutates: `bbox.topLeftX` and `bbox.topLeftY`, in place, on the calling Writer.
+    void resizeCreditBbox(const std::string& wrappedLines);
 
 
     // Decodes a single Unicode codepoint from a UTF-8 encoded string, starting at the given byte offset.
