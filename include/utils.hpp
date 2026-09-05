@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <string>
+#include <vector>
 
 // Get a file's path from the root of this project.
 inline std::string projectPath(const std::string& relativePath) {
@@ -11,7 +12,7 @@ inline std::string projectPath(const std::string& relativePath) {
 
 // Convert all characters in a string to lowercase.
 // Borrowed from https://stackoverflow.com/a/313990
-std::string toLower(const std::string& text) {
+inline std::string toLower(const std::string& text) {
     std::string loweredText = text;
     std::transform(loweredText.begin(), loweredText.end(), loweredText.begin(),
     [](unsigned char c){ return std::tolower(c); });
@@ -25,7 +26,8 @@ std::string toLower(const std::string& text) {
 // delimiter: A substring of `s` to split the string with.
 //
 // Returns a vector of the split string.
-static std::vector<std::string> split(std::string s, const std::string& delimiter) {
+inline static std::vector<std::string> split(std::string s, const std::string& delimiter)
+{
     std::vector<std::string> tokens;
     size_t pos = 0;
     std::string token;

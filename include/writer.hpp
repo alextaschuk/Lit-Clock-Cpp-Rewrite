@@ -3,12 +3,11 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
-#include <cmath>
-#include <vector>
 #include <fstream>
 #include <iostream>
-#include <print>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "utils.hpp"
 
@@ -99,8 +98,8 @@ enum TextType {
 // write the glyph, the font's scale, and the color of the glyph.
 struct Pen {
     stbtt_fontinfo font;
-    float fontScale; // value used to convert something from font units to pixel units
-    short int color = 128;
+    float fontScale; // value used to convert from font units to pixel units
+    short int color = 128; // grayscale value (0-255) to draw text with.
     int x = 0; // X coordinate of the pen's position on the image.
     int y = 0; // Y coordinate of the pen's position on the image.
 };
@@ -109,9 +108,6 @@ struct Pen {
 class Writer {
   public:
     BoundingBox bbox; // An area that the pen must write inside of.
-    
-    // The image to write a quote on, represented as a bitmap.
-    //std::vector<unsigned char> image;
 
     // Generate an image of a single quote.
     //
@@ -120,11 +116,16 @@ class Writer {
     //
     // Returns a bitmap of the image.
     std::vector<unsigned char> getImage(std::unordered_map<std::string, std::string> row, bool includeCredits);
+
+    // Saves all quote images to an `images/` directory.
+    //
+    // Each row in the CSV is parsed to create an image of each quote.
+    void saveImages();
     
   private:  
     Pen pen;
     std::string text; // The text that the pen is writing.
-    TextType textType = QUOTE; // is the text that is being written a quote or credits for a quote?
+    TextType textType = QUOTE; // is the text a quote or credits for a quote?
     Fonts fonts;
     std::vector<Delimiter> charDelimiters = {
         Delimiter(CharacterDelimiters().ITALIC),
@@ -224,12 +225,14 @@ class Writer {
     int maxAscender(const std::string& line);
 
 
-    // Calculates a font's recommended vertical spacing between two rows of text.
+    // Calculates a font's recommended line spacing (the vertical distance from one line's baseline to
+    // the next line's baseline) in pixels, at a given font scale.
     //
-    // font: The font used to calculate the spacing between the rows.
+    // font: The font whose line spacing is being measured.
     // fontScale: The font's scale to convert the spacing units from font to pixel.
     //
-    // Returns the font's recommended vertical spacing between two rows of text.
+    // Returns the font's recommended pixel distance to increase the pen's Y coordinate by to move to the
+    // next line.
     int getLineHeight(const stbtt_fontinfo& font, const float& fontScale)
     {
         // (ascent - descent) is the height of the font's tallest glyph.

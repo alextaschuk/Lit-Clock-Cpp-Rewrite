@@ -1,19 +1,20 @@
-#pragma once // prevent contents of header from being read more than once if included more than once
+#pragma once
 
 #include <string>
 
-const int& SCREEN_WIDTH = 800;
-const int& SCREEN_HEIGHT = 480;
+inline constexpr int SCREEN_WIDTH = 800;
+inline constexpr int SCREEN_HEIGHT = 480;
 
-const int& BG_COLOR = 255;
-const int& QUOTE_COLOR = 128;
-const int& TIME_COLOR = 0;
-const int& CREDIT_COLOR = 0;
+inline constexpr int BG_COLOR = 255;
+inline constexpr int QUOTE_COLOR = 128;
+inline constexpr int TIME_COLOR = 0;
+inline constexpr int CREDIT_COLOR = 0;
 
-const std::string& QUOTES_PATH = "share/quotes.csv";
-const std::string& IMAGE_PATH = "images/";
-const std::string& IMAGE_FORMAT = "bmp";
-const bool& INCLUDE_CREDITS = true;
+//inline const std::string QUOTES_PATH = "share/quotes.csv";
+inline const std::string QUOTES_PATH = "test.csv";
+inline const std::string IMAGE_PATH = "images/";
+inline const std::string IMAGE_FORMAT = "png";
+inline constexpr bool INCLUDE_CREDITS = true;
 
-const float& MIN_FONT_SCALE = 12;
-const float& MAX_FONT_SCALE = 150;
+inline constexpr float MIN_FONT_SCALE = 12.0f;
+inline constexpr float MAX_FONT_SCALE = 500.0f;
