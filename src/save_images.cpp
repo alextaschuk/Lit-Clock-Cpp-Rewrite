@@ -3,6 +3,7 @@
 #include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <print>
 
 #include "stb_image_write.h"
 

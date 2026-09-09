@@ -12,6 +12,7 @@
 #include "stb_image_write.h"
 
 #include <algorithm>
+#include <print>
 #include <cctype>
 #include <string>
 #include <unordered_map>
@@ -85,7 +86,7 @@ int Writer::decodeUTF8(const std::string& s, size_t i, int& numBytes)
     }
 
     numBytes = 1;
-    std::println("Error: Malformed Byte: {}", c);
+    std::println("Error: Malformed Byte: {:#x}", static_cast<int>(c));
     return c;
 }
 
