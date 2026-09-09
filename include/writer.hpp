@@ -1,15 +1,15 @@
 #pragma once
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
-
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "stb_truetype.h"
+
 #include "utils.hpp"
+
 
 static float SCALE_MULTIPLIER = 0.99; // to constrain bboxes to make sure text fits
 
@@ -115,7 +115,7 @@ class Writer {
     // includeCredits: `true` to write quote's author and title in the bottom right of the image, `false` to discard.
     //
     // Returns a bitmap of the image.
-    std::vector<unsigned char> getImage(std::unordered_map<std::string, std::string> row, bool includeCredits);
+    std::vector<unsigned char> generateQuoteImage(std::unordered_map<std::string, std::string> row, const bool& includeCredits);
 
     // Saves all quote images to an `images/` directory.
     //
