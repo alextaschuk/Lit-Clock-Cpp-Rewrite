@@ -77,7 +77,7 @@ void LitClock::cacheQuotes()
         minRows.push_back(currRow);
     }
     minRows.push_back(currRow);
-    spdlog::info("Sucessfully cached quotes. Number of quotes: {0:d}", quoteCount);
+    spdlog::info("Successfully cached {0:d} quotes.", quoteCount);
 }
 
 std::vector<unsigned char> LitClock::getImage(const size_t& quoteHour, const size_t& quoteMin)
@@ -155,14 +155,16 @@ void LitClock::tick_forward() {
     std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond)); // sleep until next min
 }
 
-void  Handler(int signo){
+void  Handler(int signo)
+{
     std::println("ctrl + c detected.");
     DEV_Module_Exit();
     exit(0);
 }
 
 
-int main() {
+int main()
+{
     //Exception handling:ctrl + c
     signal(SIGINT, Handler);
 
@@ -181,8 +183,8 @@ int main() {
     std::vector<unsigned char> startupImage = lit_clock.writer.generateQuoteImage(startupMessage, false);
     spdlog::info("Got the first image");
     UBYTE* startupMsgPtr = startupImage.data();
-    Paint_SelectImage(startupMsgPtr);
-    EPD_IT8951_8bp_Refresh(startupMsgPtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, GC16_Mode);
+    //Paint_SelectImage(startupMsgPtr);
+    EPD_IT8951_8bp_Refresh(startupMsgPtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr);
     spdlog::info("Sleeping for 30 sec to let the RTC update");
     std::this_thread::sleep_for(std::chrono::seconds(30));
     

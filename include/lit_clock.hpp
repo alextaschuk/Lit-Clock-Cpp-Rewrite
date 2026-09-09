@@ -9,7 +9,7 @@ extern "C" {
     #include "waveshare-IT8951/lib/GUI/GUI_Paint.h"
 }
 
-#include "spdlog/spdlog.h"
+#include "spdlog/spdlog.h" // logger
 
 #include "constants.hpp"
 #include "writer.hpp"
@@ -44,26 +44,23 @@ class LitClock {
             // waveshare screen init 
             std::uint16_t VCOM_Scaled = static_cast<std::uint16_t>(std::round(std::abs(VCOM) * 1000.0));
             Dev_Info = EPD_IT8951_Init(VCOM_Scaled);
-            
+
             Panel_Width = Dev_Info.Panel_W; //TODO: use this instead of SCREEN WIDTH/ SCREEN HEIGHT 
             Panel_Height = Dev_Info.Panel_H;   
             Init_Target_Memory_Addr = Dev_Info.Memory_Addr_L | (Dev_Info.Memory_Addr_H << 16);
             spdlog::info("EPD intialized");
-            spdlog::info("Clearing the screen");
             EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
-            spdlog::info("Screen Cleared");
-            
-            cacheQuotes();     
 
             // waveshare screen config/setup
-            spdlog::info("Performing screen config");
             Paint_NewImage(imageRingBuffer.buffer.data(), SCREEN_WIDTH, SCREEN_HEIGHT, 0, WHITE); // rotate=0, adjust WHITE per Waveshare's enum
             Paint_SelectImage(imageRingBuffer.buffer.data());
             Paint_SetRotate(0); // ROTATE_0, per Waveshare.
             Paint_SetMirroring(0); // MIRROR_NONE, per Waveshare.
             Paint_SetBitsPerPixel(8);
             Paint_Clear(0xFF); // clears the screen to white?
-            spdlog::info("Screen config complete");
+            spdlog::info("Initial screen config complete");
+
+            cacheQuotes();
         }
 
         Writer writer;
