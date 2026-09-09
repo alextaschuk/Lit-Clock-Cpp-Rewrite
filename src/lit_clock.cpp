@@ -12,6 +12,7 @@
 #include <signal.h>
 
 #include "constants.hpp"
+#include "spdlog/spdlog.h"
 #include "utils.hpp"
 #include "writer.hpp"
 
@@ -76,6 +77,7 @@ void LitClock::cacheQuotes()
         minRows.push_back(currRow);
     }
     minRows.push_back(currRow);
+    spdlog::info("Sucessfully cached quotes. Number of quotes: {0:d}", quoteCount);
 }
 
 std::vector<unsigned char> LitClock::getImage(const size_t& quoteHour, const size_t& quoteMin)
@@ -165,8 +167,8 @@ int main() {
     signal(SIGINT, Handler);
 
     LitClock lit_clock;
-    // wipe screen
-    lit_clock.clearScreen();
+
+    spdlog::info("Displaying the startup screen");
     //display startup screen
     std::unordered_map<std::string, std::string> startupMessage = 
     {
@@ -177,16 +179,18 @@ int main() {
         {"author", ""},
     };
     std::vector<unsigned char> startupImage = lit_clock.writer.generateQuoteImage(startupMessage, false);
+    spdlog::info("Got the first image");
     UBYTE* startupMsgPtr = startupImage.data();
     Paint_SelectImage(startupMsgPtr);
     EPD_IT8951_8bp_Refresh(startupMsgPtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, GC16_Mode);
-    // sleep for 30 sec to let the RTC update
+    spdlog::info("Sleeping for 30 sec to let the RTC update");
     std::this_thread::sleep_for(std::chrono::seconds(30));
     
     // initialize the buffer
     int hour = -1;
     int minute = -1;
     lit_clock.getTime(hour, minute);
+    spdlog::info("Initalizing the buffer");
     for (int i = 0; i < NUM_BUFFERED_IMGS; i++)
     {
         std::vector<unsigned char> img = lit_clock.getImage(hour, minute);
