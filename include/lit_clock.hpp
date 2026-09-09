@@ -1,5 +1,6 @@
 #pragma once
 
+#include <print>
 #include <vector>
 
 extern "C" {
@@ -31,6 +32,21 @@ struct ImageRingBuffer {
 class LitClock {
     public:
         LitClock() {
+            //Init the BCM2835 Device
+            if(DEV_Module_Init()!=0) {
+                std::println("Error: Failed to initialize hardware module.");
+                std::exit(1);
+            }
+            std::println("here");
+            std::cout.flush();
+
+            // waveshare screen init 
+            IT8951_Dev_Info Dev_Info = EPD_IT8951_Init(VCOM);
+            UWORD Panel_Width = Dev_Info.Panel_W; //TODO: use this instead of SCREEN WIDTH/ SCREEN HEIGHT 
+            UWORD Panel_Height = Dev_Info.Panel_H;   
+            UDOUBLE Init_Target_Memory_Addr = Dev_Info.Memory_Addr_L | (Dev_Info.Memory_Addr_H << 16);
+            EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
+            
             cacheQuotes();     
 
             // waveshare screen config/setup
@@ -46,12 +62,7 @@ class LitClock {
         ImageRingBuffer imageRingBuffer;
         std::vector<std::vector<std::unordered_map<std::string, std::string>>> quotes;
         
-        // waveshare screen init 
-        IT8951_Dev_Info Dev_Info = EPD_IT8951_Init(VCOM);
-        UWORD Panel_Width = Dev_Info.Panel_W; //TODO: use this instead of SCREEN WIDTH/ SCREEN HEIGHT 
-        UWORD Panel_Height = Dev_Info.Panel_H;   
-        UDOUBLE Init_Target_Memory_Addr = Dev_Info.Memory_Addr_L | (Dev_Info.Memory_Addr_H << 16);
-
+        
         void tick_forward();
         std::vector<unsigned char> getImage(const size_t& quoteHour, const size_t& quoteMin);
         void cacheQuotes();

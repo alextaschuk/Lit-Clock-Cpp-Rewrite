@@ -152,7 +152,17 @@ void LitClock::tick_forward() {
     std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond)); // sleep until next min
 }
 
+void  Handler(int signo){
+    std::println("ctrl + c detected.");
+    DEV_Module_Exit();
+    exit(0);
+}
+
+
 int main() {
+    //Exception handling:ctrl + c
+    signal(SIGINT, Handler);
+
     LitClock lit_clock;
     // wipe screen
     lit_clock.clearScreen();
