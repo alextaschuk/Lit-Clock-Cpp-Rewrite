@@ -7,6 +7,9 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+# sbdlog submodule for logging
+add_subdirectory(extern/spdlog)
+
 # bcm2835 (library for GPIO/SPI backend)
 add_library(bcm2835 STATIC extern/bcm2835/src/bcm2835.c)
 target_include_directories(bcm2835 PUBLIC extern/bcm2835/src)
@@ -41,8 +44,8 @@ add_executable(save_images
 target_include_directories(clock PRIVATE include extern)
 target_include_directories(save_images PRIVATE include extern)
 
-target_link_libraries(clock PRIVATE it8951)
-target_link_libraries(save_images PRIVATE it8951)
+target_link_libraries(clock PRIVATE it8951 spdlog::spdlog)
+target_link_libraries(save_images PRIVATE it8951 spdlog::spdlog)
 
 target_compile_definitions(clock PRIVATE PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 target_compile_definitions(save_images PRIVATE PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
