@@ -9,6 +9,7 @@
 #include <chrono>
 #include <ctime>
 #include <cstdlib>
+#include <signal.h>
 
 #include "constants.hpp"
 #include "utils.hpp"
