@@ -1,6 +1,7 @@
 #pragma once
 
-#include <print>
+#include <cmath>
+#include <cstdint>
 #include <vector>
 
 extern "C" {
@@ -41,7 +42,9 @@ class LitClock {
             }
 
             // waveshare screen init 
-            Dev_Info = EPD_IT8951_Init(VCOM);
+            std::uint16_t VCOM_Scaled = static_cast<std::uint16_t>(std::round(std::abs(VCOM) * 1000.0));
+            Dev_Info = EPD_IT8951_Init(VCOM_Scaled);
+            
             Panel_Width = Dev_Info.Panel_W; //TODO: use this instead of SCREEN WIDTH/ SCREEN HEIGHT 
             Panel_Height = Dev_Info.Panel_H;   
             Init_Target_Memory_Addr = Dev_Info.Memory_Addr_L | (Dev_Info.Memory_Addr_H << 16);
