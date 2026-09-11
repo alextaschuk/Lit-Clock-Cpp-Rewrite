@@ -25,5 +25,5 @@ inline constexpr bool INCLUDE_CREDITS = true;
 inline constexpr float MIN_FONT_SCALE = 12.0f;
 inline constexpr float MAX_FONT_SCALE = 500.0f;
 
-inline constexpr int NUM_BUFFERED_IMGS = 3; // buffer 3 images at a time.
-inline constexpr int BUFFER_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * NUM_BUFFERED_IMGS;
+inline constexpr int MAX_IMAGES_TO_BUFFER = 3; // buffer 3 images at a time.
+inline constexpr int BUFFER_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * MAX_IMAGES_TO_BUFFER;

@@ -1,5 +1,6 @@
 #include "lit_clock.hpp"
 
+#include <cstddef>
 #include <string>
 #include <unordered_map>
 #include <print>
@@ -10,10 +11,12 @@
 #include <ctime>
 #include <cstdlib>
 #include <signal.h>
+#include <cmath> 
 
 #include "constants.hpp"
 #include "spdlog/spdlog.h"
 #include "utils.hpp"
+#include "waveshare-IT8951/lib/Config/DEV_Config.h"
 #include "writer.hpp"
 
 void LitClock::cacheQuotes()
@@ -98,23 +101,25 @@ std::vector<unsigned char> LitClock::getImage(const size_t& quoteHour, const siz
     return writer.generateQuoteImage(selectedRow, includeCredits);
 }
 
-void LitClock::bufferImage(const std::vector<unsigned char>& image)
+void LitClock::displayQuote()
 {
-    if (image.size() != IMAGE_SIZE) {
-        throw std::runtime_error("bufferImage: image size does not match expected IMAGE_SIZE");
-    }
-    int imgOffset = imageRingBuffer.getImageOffset();
-    std::copy(image.begin(), image.end(), imageRingBuffer.buffer.begin() + imgOffset);
-    imageRingBuffer.currentIdx = imageRingBuffer.nextSlot();
+    UBYTE* currentImagePtr = buffer.popImage();
+    Paint_SelectImage(currentImagePtr);
+    EPD_IT8951_8bp_Refresh(currentImagePtr, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr);
 }
 
 
-void LitClock::displayQuote()
+void LitClock::bufferImage(size_t hour, size_t minute)
 {
-    UBYTE* currentImagePtr = imageRingBuffer.buffer.data() + imageRingBuffer.getImageOffset();
-    
-    Paint_SelectImage(currentImagePtr);
-    EPD_IT8951_8bp_Refresh(currentImagePtr, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr);
+    std::vector<unsigned char> image = getImage(hour, minute);
+    buffer.pushImage(image);
+}
+
+
+void LitClock::refreshBuffer()
+{
+    advanceTime(bufferedHour,bufferedMinute);
+    bufferImage(bufferedHour, bufferedMinute);
 }
 
 
@@ -123,7 +128,8 @@ void LitClock::clearScreen()
     EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, GC16_Mode);
 }
 
-void LitClock::getTime(int& hour, int& minute)
+
+void LitClock::getTime(size_t& hour, size_t& minute)
 {
     std::time_t t = std::time(nullptr);   // current time, as a raw timestamp
     std::tm* localTime = std::localtime(&t);   // breaks it into local-time components
@@ -133,29 +139,28 @@ void LitClock::getTime(int& hour, int& minute)
 }
 
 
-void LitClock::tick_forward() {
-    int currHour = 0, currMin = 0;
+void LitClock::tick_forward()
+{
+    size_t currHour = 0, currMin = 0;
     getTime(currHour, currMin);
     
-    if (currMin == 59)
-    {
+    if (currMin == 59) {
         std::println("hour has passed. full refresh.");
         clearScreen();
     }
-    else
-    {
-        // TODO: fast refresh?
-    }
+
     displayQuote();
-    // TODO: update the buffer
+    refreshBuffer();
     
+    // sleep until the 59th second of the current min (leave 1 sec for processing time
+    // to change image on the screen)
     std::time_t t = std::time(nullptr);
     std::tm* localTime = std::localtime(&t);
     int currSecond = localTime->tm_sec;
-    std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond)); // sleep until next min
+    std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond));
 }
 
-void  Handler(int signo)
+void Handler(int signo)
 {
     std::println("ctrl + c detected.");
     DEV_Module_Exit();
@@ -170,7 +175,6 @@ int main()
 
     LitClock lit_clock;
 
-    spdlog::info("Displaying the startup screen");
     //display startup screen
     std::unordered_map<std::string, std::string> startupMessage = 
     {
@@ -181,29 +185,30 @@ int main()
         {"author", ""},
     };
     std::vector<unsigned char> startupImage = lit_clock.writer.generateQuoteImage(startupMessage, false);
-    spdlog::info("Got the first image");
+    spdlog::info("Got the startup image");
     UBYTE* startupMsgPtr = startupImage.data();
-    //Paint_SelectImage(startupMsgPtr);
     EPD_IT8951_8bp_Refresh(startupMsgPtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr);
+    
     spdlog::info("Sleeping for 30 sec to let the RTC update");
     std::this_thread::sleep_for(std::chrono::seconds(30));
     
+    // display the first quote
+    lit_clock.getTime(lit_clock.bufferedHour, lit_clock.bufferedMinute);
+    std::vector<unsigned char> firstQuote = lit_clock.getImage(lit_clock.bufferedHour, lit_clock.bufferedMinute);
+    UBYTE* firstQuotePtr = firstQuote.data();
+    EPD_IT8951_8bp_Refresh(firstQuotePtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr);
+    
     // initialize the buffer
-    int hour = -1;
-    int minute = -1;
-    lit_clock.getTime(hour, minute);
-    spdlog::info("Initalizing the buffer");
-    for (int i = 0; i < NUM_BUFFERED_IMGS; i++)
-    {
-        std::vector<unsigned char> img = lit_clock.getImage(hour, minute);
-        lit_clock.bufferImage(img);
-
-        minute = (minute == 59) ? 0 : minute++;
-        int difference = 60 - minute - lit_clock.imageRingBuffer.currentIdx;
-        if (difference == 0) {
-            hour++;
-        }
+    for (int i = 0; i < MAX_IMAGES_TO_BUFFER; i++) {
+        lit_clock.refreshBuffer();
     }
+    spdlog::info("Image buffer initialized");
+
+    // sleep until we're ready to start using the buffer
+    std::time_t t = std::time(nullptr);
+    std::tm* localTime = std::localtime(&t);
+    int currSecond = localTime->tm_sec;
+    std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond)); // sleep until next min
     
     // This is bad practice, but it ensures that anything I might've missed is caught
     // so that the screen can be cleared before the program exits.

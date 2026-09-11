@@ -45,7 +45,7 @@ void Writer::saveImages()
         quoteCount++;
         std::vector<std::string> splitRow = split(line, CharacterDelimiters().TIMESTR);
         if (splitRow.size() != 5) {
-            std::println("Error: Row {} is missing a column.", quoteCount);
+            std::println("Error: Row {} is missing a column.", quoteCount + 1);
             continue;
         }
 

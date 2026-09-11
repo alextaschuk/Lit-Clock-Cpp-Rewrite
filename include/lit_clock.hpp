@@ -13,24 +13,8 @@ extern "C" {
 
 #include "constants.hpp"
 #include "writer.hpp"
+#include "image_buffer.hpp"
 
-
-// A buffer that contains the images to be displayed for the next `BUFFER_SIZE` minutes, including the currently displayed
-// image.
-struct ImageRingBuffer {
-    std::vector<unsigned char> buffer = std::vector<unsigned char>(BUFFER_SIZE, 0);
-    int currentIdx = 0; // TODO: fix w/ read & write indices
-
-    int getImageOffset() const {
-        return currentIdx * IMAGE_SIZE;
-    }
-
-    // call after writing to the buffer
-    int nextSlot() const {
-        return (currentIdx + 1) % NUM_BUFFERED_IMGS;
-    }
-
-};
 
 class LitClock {
     public:
@@ -52,32 +36,44 @@ class LitClock {
             EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
 
             // waveshare screen config/setup
-            Paint_NewImage(imageRingBuffer.buffer.data(), SCREEN_WIDTH, SCREEN_HEIGHT, 0, WHITE); // rotate=0, adjust WHITE per Waveshare's enum
-            Paint_SelectImage(imageRingBuffer.buffer.data());
+            Paint_NewImage(buffer.data.data(), SCREEN_WIDTH, SCREEN_HEIGHT, 0, WHITE); // rotate=0, adjust WHITE per Waveshare's enum
+            Paint_SelectImage(buffer.data.data());
             Paint_SetRotate(0); // ROTATE_0, per Waveshare.
             Paint_SetMirroring(0); // MIRROR_NONE, per Waveshare.
             Paint_SetBitsPerPixel(8);
-            Paint_Clear(0xFF); // clears the screen to white?
             spdlog::info("Initial screen config complete");
 
             cacheQuotes();
         }
 
         Writer writer;
-        ImageRingBuffer imageRingBuffer;
+        ImageBuffer buffer;
+        size_t bufferedHour = 0; // hour of the last buffered quote
+        size_t bufferedMinute = 0; // minute of the last buffered quote
         std::vector<std::vector<std::unordered_map<std::string, std::string>>> quotes;
         IT8951_Dev_Info Dev_Info = {0, 0};
         UWORD Panel_Width;
         UWORD Panel_Height;
         UDOUBLE Init_Target_Memory_Addr;
         
-        void tick_forward();
-        std::vector<unsigned char> getImage(const size_t& quoteHour, const size_t& quoteMin);
         void cacheQuotes();
-        void bufferImage(const std::vector<unsigned char>& image);
+        void tick_forward();
+        void bufferImage(size_t hour, size_t minute); // Renders and pushes the image for the given (hour, minute) onto the buffer.
+        void refreshBuffer();
         void displayQuote();
         void clearScreen();
+        std::vector<unsigned char> getImage(const size_t& quoteHour, const size_t& quoteMin);
         
         // Get a device's current hour and minute, in its timezone.
-        void getTime(int& hour, int& minute);
+        void getTime(size_t& hour, size_t& minute);
+        
+        // Advances (hour, minute) by one minute, wrapping hour forward at the top of the hour.
+        void advanceTime(size_t& hour, size_t& minute) {
+            if (minute == 59) {
+                minute = 0;
+                hour = (hour == 23) ? 0 : hour + 1;
+            } else {
+                minute += 1;
+            }
+        }
 };
