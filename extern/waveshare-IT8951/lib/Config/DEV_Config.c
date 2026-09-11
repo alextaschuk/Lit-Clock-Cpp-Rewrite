@@ -222,8 +222,8 @@ UBYTE DEV_Module_Init(void)
 	bcm2835_spi_begin();                                         //Start spi interface, set spi pin for the reuse function
 	bcm2835_spi_setBitOrder(BCM2835_SPI_BIT_ORDER_MSBFIRST);     //High first transmission
 	bcm2835_spi_setDataMode(BCM2835_SPI_MODE0);                  //spi mode 0
-	//bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_16);   //For RPi3/3B/3B+
-	bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_32);   //For RPi 4
+	bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_16);   //For RPi3/3B/3B+
+	//bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_32);   //For RPi 4
 	/* SPI clock reference link：*/
 	/*http://www.airspayce.com/mikem/bcm2835/group__constants.html#gaf2e0ca069b8caef24602a02e8a00884e*/
 
