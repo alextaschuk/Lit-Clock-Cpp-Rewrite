@@ -103,9 +103,18 @@ std::vector<unsigned char> LitClock::getImage(const size_t& quoteHour, const siz
 
 void LitClock::displayQuote()
 {
+    auto t1 = std::chrono::high_resolution_clock::now();
     UBYTE* currentImagePtr = buffer.popImage();
+    auto t2 = std::chrono::high_resolution_clock::now();
     Paint_SelectImage(currentImagePtr);
+    auto t3 = std::chrono::high_resolution_clock::now();
     EPD_IT8951_8bp_Refresh(currentImagePtr, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr);
+    auto t4 = std::chrono::high_resolution_clock::now();
+
+    std::println("pop: {}s, select: {}s, refresh: {}s",
+        std::chrono::duration<double>(t2-t1).count(),
+        std::chrono::duration<double>(t3-t2).count(),
+        std::chrono::duration<double>(t4-t3).count());
 }
 
 
@@ -148,11 +157,11 @@ void LitClock::tick_forward()
 {
     size_t currHour = 0, currMin = 0;
     getTime(currHour, currMin);
-    
     if (currMin == 59) {
         std::println("hour has passed. full refresh.");
         EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, GC16_Mode);
     }
+
     displayQuote();
     spdlog::info("displayed a new quote");
     refreshBuffer();
