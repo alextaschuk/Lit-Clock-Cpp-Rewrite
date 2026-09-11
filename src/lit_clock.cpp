@@ -11,7 +11,6 @@
 #include <ctime>
 #include <cstdlib>
 #include <signal.h>
-#include <cmath> 
 
 #include "constants.hpp"
 #include "spdlog/spdlog.h"
@@ -178,9 +177,9 @@ int main()
         {"author", ""},
     };
     std::vector<unsigned char> startupImage = lit_clock.writer.generateQuoteImage(startupMessage, false);
-    spdlog::info("Got the startup image");
     UBYTE* startupMsgPtr = startupImage.data();
     EPD_IT8951_8bp_Refresh(startupMsgPtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr);
+    spdlog::info("Displayed startup image");
     
     spdlog::info("Sleeping for 30 sec to let the RTC update");
     std::this_thread::sleep_for(std::chrono::seconds(30));
@@ -190,6 +189,7 @@ int main()
     std::vector<unsigned char> firstQuote = lit_clock.getImage(lit_clock.bufferedHour, lit_clock.bufferedMinute);
     UBYTE* firstQuotePtr = firstQuote.data();
     EPD_IT8951_8bp_Refresh(firstQuotePtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr);
+    spdlog::info("Displayed first quote");
     
     // initialize the buffer
     for (int i = 0; i < MAX_IMAGES_TO_BUFFER; i++) {
@@ -201,6 +201,7 @@ int main()
     std::time_t t = std::time(nullptr);
     std::tm* localTime = std::localtime(&t);
     int currSecond = localTime->tm_sec;
+    spdlog::debug("sleeping for {} seconds", 59 - currSecond);
     std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond)); // sleep until next min
     
     // This is bad practice, but it ensures that anything I might've missed is caught
@@ -215,6 +216,7 @@ int main()
             std::time_t t = std::time(nullptr);
             std::tm* localTime = std::localtime(&t);
             int currSecond = localTime->tm_sec;
+            spdlog::debug("sleeping for {} seconds", 59 - currSecond);
             std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond));
         }
     } catch (...)
