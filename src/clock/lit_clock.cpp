@@ -153,10 +153,12 @@ void LitClock::tick_forward()
         std::println("hour has passed. full refresh.");
         EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, GC16_Mode);
     }
-
     displayQuote();
+    spdlog::info("displayed a new quote");
     refreshBuffer();
+    spdlog::info("refreshed the buffer");
 }
+
 
 void Handler(int signo)
 {
@@ -222,8 +224,9 @@ int main()
             std::time_t t = std::time(nullptr);
             std::tm* localTime = std::localtime(&t);
             int currSecond = localTime->tm_sec;
-            spdlog::info("sleeping for {} seconds", 59 - currSecond);
+            spdlog::info("going to sleep for {} seconds", 59 - currSecond);
             std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond));
+            spdlog::info("woke up to display next quote.");
         }
     } catch (...)
     {
