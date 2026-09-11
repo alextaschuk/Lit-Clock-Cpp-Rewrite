@@ -151,13 +151,6 @@ void LitClock::tick_forward()
 
     displayQuote();
     refreshBuffer();
-    
-    // sleep until the 59th second of the current min (leave 1 sec for processing time
-    // to change image on the screen)
-    std::time_t t = std::time(nullptr);
-    std::tm* localTime = std::localtime(&t);
-    int currSecond = localTime->tm_sec;
-    std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond));
 }
 
 void Handler(int signo)
@@ -213,7 +206,17 @@ int main()
     // This is bad practice, but it ensures that anything I might've missed is caught
     // so that the screen can be cleared before the program exits.
     try {
-        lit_clock.tick_forward();
+        while(true)
+        {
+            lit_clock.tick_forward();
+            
+            // sleep until the 59th second of the current min (leave 1 sec for processing time
+            // to change image on the screen)
+            std::time_t t = std::time(nullptr);
+            std::tm* localTime = std::localtime(&t);
+            int currSecond = localTime->tm_sec;
+            std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond));
+        }
     } catch (...)
     {
         std::println("error");
