@@ -2,6 +2,7 @@
 // A circular buffer for images
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 #include "constants.hpp"
@@ -39,5 +40,5 @@ class ImageBuffer {
         void pushImage(const std::vector<unsigned char>& image);
 
         // pop an image from the buffer
-        uint8_t* popImage();
+        std::uint8_t* popImage();
 };
