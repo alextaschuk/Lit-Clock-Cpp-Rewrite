@@ -1,4 +1,4 @@
-#include "image_buffer.hpp"
+#include "clock/image_buffer.hpp"
 #include "constants.hpp"
 #include <algorithm>
 #include <cstdint>

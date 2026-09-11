@@ -12,7 +12,7 @@ extern "C" {
 #include "spdlog/spdlog.h" // logger
 
 #include "constants.hpp"
-#include "writer.hpp"
+#include "image_generator/writer.hpp"
 #include "image_buffer.hpp"
 
 

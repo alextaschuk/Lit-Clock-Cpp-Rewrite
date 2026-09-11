@@ -1,5 +1,5 @@
-#include "writer.hpp"
-#include "delimiter.hpp"
+#include "image_generator/writer.hpp"
+#include "image_generator/delimiter.hpp"
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 

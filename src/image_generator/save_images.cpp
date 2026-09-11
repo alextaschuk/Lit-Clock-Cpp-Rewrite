@@ -1,4 +1,4 @@
-#include "writer.hpp"
+#include "image_generator/writer.hpp"
 
 #include <chrono>
 #include <filesystem>

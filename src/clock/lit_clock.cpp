@@ -1,4 +1,4 @@
-#include "lit_clock.hpp"
+#include "clock/lit_clock.hpp"
 
 #include <cstddef>
 #include <string>
@@ -16,7 +16,7 @@
 #include "spdlog/spdlog.h"
 #include "utils.hpp"
 #include "waveshare-IT8951/lib/Config/DEV_Config.h"
-#include "writer.hpp"
+#include "image_generator/writer.hpp"
 
 void LitClock::cacheQuotes()
 {
@@ -216,7 +216,7 @@ int main()
     } catch (...)
     {
         std::println("error");
-        Paint_Clear(0xFF);
+        Paint_Clear(0xFF); //TODO: fix to actually clear screen
         exit(0);
     }
 }
