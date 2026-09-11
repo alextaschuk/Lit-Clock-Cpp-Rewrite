@@ -40,7 +40,7 @@ class LitClock
             Paint_SelectImage(buffer.data.data());
             Paint_SetRotate(0); // ROTATE_0, per Waveshare.
             Paint_SetMirroring(0); // MIRROR_NONE, per Waveshare.
-            Paint_SetBitsPerPixel(8);
+            Paint_SetBitsPerPixel(BITS_PER_PIXEL);
             spdlog::info("Initial Waveshare screen config complete");
 
             cacheQuotes();

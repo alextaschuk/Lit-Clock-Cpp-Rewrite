@@ -2,10 +2,12 @@
 // are stored here.
 #pragma once
 
+#include <cstddef>
 #include <string>
 
 inline constexpr int SCREEN_WIDTH = 1448;
 inline constexpr int SCREEN_HEIGHT = 1072;
+inline constexpr size_t BITS_PER_PIXEL = 4;
 inline constexpr int IMAGE_SIZE_8BPP = SCREEN_WIDTH * SCREEN_HEIGHT;
 inline constexpr int IMAGE_SIZE_4BPP = (SCREEN_WIDTH + 1) / 2 * SCREEN_HEIGHT;
 inline constexpr double VCOM = -2.79;// set to VCOM value that's on the screen's FPC
