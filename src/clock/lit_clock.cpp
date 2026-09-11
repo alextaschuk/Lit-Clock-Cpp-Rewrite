@@ -19,9 +19,7 @@
 #include "image_generator/writer.hpp"
 
 void LitClock::cacheQuotes()
-{
-    std::string currTime = "00:00";
-    
+{    
     std::ifstream quoteFile(projectPath(QUOTES_PATH));
     if (!quoteFile.is_open()) {
         std::println("Error: Failed to open quotes file.");
@@ -29,8 +27,9 @@ void LitClock::cacheQuotes()
     }
 
     std::string line;
-    std::getline(quoteFile, line); // skip header row
+    std::getline(quoteFile, line); // skip the header row
 
+    std::string currTime = "00:00";
     std::string prevTime = "00:00";
     std::vector<std::unordered_map<std::string, std::string>> minRows = {}; // all rows for a given minute
     std::unordered_map<std::string, std::string> currRow = 
@@ -82,6 +81,7 @@ void LitClock::cacheQuotes()
     spdlog::info("Successfully cached {0:d} quotes.", quoteCount);
 }
 
+
 std::vector<unsigned char> LitClock::getImage(const size_t& quoteHour, const size_t& quoteMin)
 {
     std::string minute = (quoteMin < 10) ? "0" + std::to_string(quoteMin) : std::to_string((quoteMin));
@@ -99,6 +99,7 @@ std::vector<unsigned char> LitClock::getImage(const size_t& quoteHour, const siz
     std::unordered_map<std::string, std::string> selectedRow = usableRows[distr(gen)];
     return writer.generateQuoteImage(selectedRow, includeCredits);
 }
+
 
 void LitClock::displayQuote()
 {
@@ -129,6 +130,17 @@ void LitClock::getTime(size_t& hour, size_t& minute)
 
     hour = localTime->tm_hour;
     minute = localTime->tm_min;
+}
+
+
+void LitClock::advanceTime(size_t& hour, size_t& minute)
+{
+    if (minute == 59) {
+        minute = 0;
+        hour = (hour == 23) ? 0 : hour + 1;
+    } else {
+        minute += 1;
+    }
 }
 
 

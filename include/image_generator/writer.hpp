@@ -49,8 +49,8 @@ enum TextType {
     CREDITS // author and book title
 };
 
-// Used to write a glyph on an image. Tracks the image's bounds, where on the image the glyph should be written, the font used to
-// write the glyph, the font's scale, and the color of the glyph.
+// Stores information used to write a glyph on an image. It tracks the image's bounds, where on the image the glyph should be written, the
+// font used to write the glyph, the font's scale, and the color of the glyph.
 struct Pen {
     stbtt_fontinfo font;
     float fontScale; // value used to convert from font units to pixel units
@@ -69,7 +69,7 @@ class Writer {
     // row: A single row from the CSV file.
     // includeCredits: `true` to write quote's author and title in the bottom right of the image, `false` to discard.
     //
-    // Returns a bitmap of the image.
+    // Returns a bitmap of the image as a byte buffer.
     std::vector<unsigned char> generateQuoteImage(std::unordered_map<std::string, std::string> row, const bool& includeCredits);
 
     // Saves all quote images to an `images/` directory.
@@ -78,23 +78,26 @@ class Writer {
     void saveImages();
     
   private:  
-    Pen pen;
+    Pen pen; // The pen to write the text with.
     std::string text; // The text that the pen is writing.
-    TextType textType = QUOTE; // is the text a quote or credits for a quote?
-    Fonts fonts;
+    TextType textType = QUOTE; // Tells the writer if the current text is a quote or credits for a quote.
+    Fonts fonts; // Stores all fonts that could be used to write a quote or its credits.
 
+    // An array of `Delimiters` that are used to format one or more characters in a text.
     std::array<Delimiter, 3> charDelimiters = { 
     Delimiter{DelimiterType::Italic, CharacterDelimiters().ITALIC},
     Delimiter{DelimiterType::Bold, CharacterDelimiters().BOLD},
     Delimiter{DelimiterType::Time, CharacterDelimiters().TIMESTR}
     };
 
-    // get a character delimiter from charDelimiters by passing in its type
+
+    // Returns a character delimiter from `charDelimiters` by passing in its type.
     Delimiter& getDelimiter(DelimiterType type) {
         return charDelimiters[static_cast<size_t>(type)];
     }
 
-    // find which delimiter a character represents
+
+    // Finds which delimiter a character represents.
     Delimiter* findDelimiter(const std::string& character) {
         for (auto& delim : charDelimiters) {
             if (delim.character == character)
@@ -103,41 +106,35 @@ class Writer {
         return nullptr;
     }
 
-    // Move the pen to some (x,y) coordinate.
+
+    // Moves the pen to some (x,y) coordinate.
     void resetPen (int x_pos, int y_pos) {
         pen.x = x_pos;
         pen.y = y_pos;
     }
 
-    // Set all character delimiter counters to 0.
-    //void resetCharDelimCount() {
-    //    for (Delimiter &delim : charDelimiters) {
-    //        if (delim.count >= 2) {
-    //            delim.count = 0;
-    //            pen.font = fonts.regular;
-    //        }
-    //    }
-    //}
+
+    // Sets all character delimiter counters to 0.
     void resetCharDelimCount() {
         for (Delimiter& d : charDelimiters) { d.count = 0; }
     }
 
 
-    // Write text inside the bounding box of an image.
+    // Writes text inside the bounding box of an image.
     //
     // image: Bitmap of the image to write on.
     // timestr: Optional substring within a quote that contains the time. Only passed in if the text being written is a quote.
     void writeInBBox(std::vector<unsigned char>& image, std::unordered_map<std::string, std::string> row);
 
-    // Find the indices where the timestring begins and ends in a quote.
+
+    // Finds the indices where the timestring begins and ends in a quote.
     //
     // row: A row from the CSV file.
     // timestrBegin: output parameter. Index where the first time string delim is found in the text.
     // timestrEnd: output parameter. Index where the second (last) time string delim is found in the text.
     //
     // Returns -1 if the timestring is not found, 0 on success.
-    int findTimestrIndices(std::unordered_map<std::string, std::string> row, size_t& timestrBegin, size_t& timestrEnd)
-    {
+    int findTimestrIndices(std::unordered_map<std::string, std::string> row, size_t& timestrBegin, size_t& timestrEnd) {
         if (row["timestring"].empty()) {
             return -1;
         }
@@ -176,8 +173,8 @@ class Writer {
     void findOptimalFontScale(std::string& wrappedLines);
 
 
-    // Helper to `findOptimalFontScale()`. Wraps text using a given font scale such that the text doesn't overflow past
-    // the rightmost x coordinate of the bbox.
+    // Wraps text using a given font scale such that the text doesn't overflow past
+    // the rightmost x coordinate of the bbox. It is a helper to `findOptimalFontScale()`
     //
     // pen: A temporary pen that is created and destroyed in `findOptimalFontScale()`.
     // 
@@ -185,8 +182,8 @@ class Writer {
     std::string wrapText(Pen& pen);
 
 
-    // Helper to `wrapText()`. Checks if a word needs to be moved onto a new line, either due to text wrapping
-    // or custom formatting.
+    // Checks if a word needs to be moved onto a new line, either due to text wrapping
+    // or custom formatting. It is a helper to `wrapText()`.
     //
     // pen: A temporary pen that is created and destroyed in `findOptimalFontScale()`.
     // word: The word to be formatted.
@@ -214,8 +211,7 @@ class Writer {
     //
     // Returns the font's recommended pixel distance to increase the pen's Y coordinate by to move to the
     // next line.
-    int getLineHeight(const stbtt_fontinfo& font, const float& fontScale)
-    {
+    int getLineHeight(const stbtt_fontinfo& font, const float& fontScale) {
         // (ascent - descent) is the height of the font's tallest glyph.
         // lineGap is the font's recommended spacing between the bottom of one row's descent and the top
         // of the next row's ascent.
@@ -223,6 +219,7 @@ class Writer {
         stbtt_GetFontVMetrics(&font, &ascent, &descent, &lineGap);
         return static_cast<int>((ascent - descent + lineGap) * fontScale);
     }
+
 
     // Shrinks the credits bbox to fit tightly around its text, allowing the quote bbox to be enlarged and fill the blank space.
     //
@@ -236,13 +233,13 @@ class Writer {
     // Mutates: `bbox.topLeftX` and `bbox.topLeftY`, in place, on the calling Writer.
     void resizeCreditBbox(const std::string& wrappedLines);
 
-    // Initalize a stb font.
+
+    // Initalizes a stb font.
     //
     // fontPath: File path to a TrueType or OpenType file.
     // outBuf: output parameter. A byte buffer of the font file. 
     // outFont: output parameter. A font profile used for font-related tasks, such as drawing a glyph.
-    void initFont(const std::string& fontPath, std::vector<unsigned char>& outBuf, stbtt_fontinfo& outFont)
-    {
+    void initFont(const std::string& fontPath, std::vector<unsigned char>& outBuf, stbtt_fontinfo& outFont) {
         std::ifstream fontStream(fontPath, std::ios::binary); // read the entire font file into a buffer
         if (!fontStream) {
             throw std::runtime_error("Failed to open font file: " + fontPath);
