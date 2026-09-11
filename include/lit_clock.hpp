@@ -61,7 +61,6 @@ class LitClock {
         void bufferImage(size_t hour, size_t minute); // Renders and pushes the image for the given (hour, minute) onto the buffer.
         void refreshBuffer();
         void displayQuote();
-        void clearScreen();
         std::vector<unsigned char> getImage(const size_t& quoteHour, const size_t& quoteMin);
         
         // Get a device's current hour and minute, in its timezone.

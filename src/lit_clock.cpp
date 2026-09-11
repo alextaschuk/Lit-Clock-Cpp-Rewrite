@@ -122,12 +122,6 @@ void LitClock::refreshBuffer()
 }
 
 
-void LitClock::clearScreen()
-{
-    EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, GC16_Mode);
-}
-
-
 void LitClock::getTime(size_t& hour, size_t& minute)
 {
     std::time_t t = std::time(nullptr);   // current time, as a raw timestamp
@@ -145,7 +139,7 @@ void LitClock::tick_forward()
     
     if (currMin == 59) {
         std::println("hour has passed. full refresh.");
-        clearScreen();
+        EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, GC16_Mode);
     }
 
     displayQuote();
@@ -201,7 +195,7 @@ int main()
     std::time_t t = std::time(nullptr);
     std::tm* localTime = std::localtime(&t);
     int currSecond = localTime->tm_sec;
-    spdlog::debug("sleeping for {} seconds", 59 - currSecond);
+    spdlog::info("sleeping for {} seconds", 59 - currSecond);
     std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond)); // sleep until next min
     
     // This is bad practice, but it ensures that anything I might've missed is caught
@@ -216,7 +210,7 @@ int main()
             std::time_t t = std::time(nullptr);
             std::tm* localTime = std::localtime(&t);
             int currSecond = localTime->tm_sec;
-            spdlog::debug("sleeping for {} seconds", 59 - currSecond);
+            spdlog::info("sleeping for {} seconds", 59 - currSecond);
             std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond));
         }
     } catch (...)
