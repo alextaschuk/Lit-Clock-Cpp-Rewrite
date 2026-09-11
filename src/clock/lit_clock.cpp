@@ -238,8 +238,8 @@ int main()
     std::time_t t = std::time(nullptr);
     std::tm* localTime = std::localtime(&t);
     int currSecond = localTime->tm_sec;
-    spdlog::info("sleeping for {} seconds", 59 - currSecond);
-    std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond)); // sleep until next min
+    spdlog::info("sleeping for {} seconds", 58 - currSecond);
+    std::this_thread::sleep_for(std::chrono::seconds(58 - currSecond)); // sleep until next min
     
     // This is bad practice, but it ensures that anything I might've missed is caught
     // so that the screen can be cleared before the program exits.
@@ -248,13 +248,13 @@ int main()
         {
             lit_clock.tick_forward();
             
-            // sleep until the 59th second of the current min (leave 1 sec for processing time
+            // sleep until the 58th second of the current min (leave ~2 sec for processing time
             // to change image on the screen)
             std::time_t t = std::time(nullptr);
             std::tm* localTime = std::localtime(&t);
             int currSecond = localTime->tm_sec;
-            spdlog::info("going to sleep for {} seconds", 59 - currSecond);
-            std::this_thread::sleep_for(std::chrono::seconds(59 - currSecond));
+            spdlog::info("going to sleep for {} seconds", 58 - currSecond);
+            std::this_thread::sleep_for(std::chrono::seconds(58 - currSecond));
             spdlog::info("woke up to display next quote.");
         }
     } catch (...)
