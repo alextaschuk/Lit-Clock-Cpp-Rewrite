@@ -10,8 +10,8 @@ void ImageBuffer::pushImage(const std::vector<unsigned char>& image)
         throw std::runtime_error("Image buffer is full.");
     }
     
-    if (image.size() != IMAGE_SIZE) {
-        throw std::runtime_error("Image size does not match expected IMAGE_SIZE.");
+    if (image.size() != IMAGE_SIZE_4BPP) {
+        throw std::runtime_error("Image size does not match expected IMAGE_SIZE_4BPP.");
     }
 
     std::copy(image.begin(), image.end(), data.begin() + getWriteOffset());

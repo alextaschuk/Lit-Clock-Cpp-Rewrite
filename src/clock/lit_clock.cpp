@@ -101,27 +101,45 @@ std::vector<unsigned char> LitClock::getImage(const size_t& quoteHour, const siz
 }
 
 
+std::vector<unsigned char> LitClock::convertTo4bpp(const std::vector<unsigned char>& image)
+{
+    const int bytesPerRow = (Panel_Width + 1) / 2;
+    std::vector<unsigned char> packed(bytesPerRow * Panel_Height, 0);
+
+    for (int row = 0; row < Panel_Height; ++row) {
+        for (int col = 0; col < Panel_Width; ++col) {
+            const unsigned char pixel4bpp = image[row * Panel_Width + col] >> 4;
+            const int outByteIdx = row * bytesPerRow + col / 2;
+
+            // According to Waveshare's docs, the even pixel goes in the low nibble,
+            // and the odd pixel goes in the even nibble.
+            // See https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#About_bpp
+            if ((col & 1) == 0) {
+                packed[outByteIdx] |= pixel4bpp;
+            } else {
+                // Waveshare: odd pixel goes in HIGH nibble.
+                packed[outByteIdx] |= pixel4bpp << 4;
+            }
+        }
+    }
+
+    return packed;
+}
+
+
 void LitClock::displayQuote()
 {
-    auto t1 = std::chrono::high_resolution_clock::now();
     UBYTE* currentImagePtr = buffer.popImage();
-    auto t2 = std::chrono::high_resolution_clock::now();
     Paint_SelectImage(currentImagePtr);
-    auto t3 = std::chrono::high_resolution_clock::now();
     EPD_IT8951_8bp_Refresh(currentImagePtr, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr);
-    auto t4 = std::chrono::high_resolution_clock::now();
-
-    std::println("pop: {}s, select: {}s, refresh: {}s",
-        std::chrono::duration<double>(t2-t1).count(),
-        std::chrono::duration<double>(t3-t2).count(),
-        std::chrono::duration<double>(t4-t3).count());
 }
 
 
 void LitClock::bufferImage(size_t hour, size_t minute)
 {
-    std::vector<unsigned char> image = getImage(hour, minute);
-    buffer.pushImage(image);
+    std::vector<unsigned char> image8bpp = getImage(hour, minute);
+    std::vector<unsigned char> packed4bpp = convertTo4bpp(getImage(hour, minute));
+    buffer.pushImage(packed4bpp);
 }
 
 
@@ -161,7 +179,7 @@ void LitClock::tick_forward()
         std::println("hour has passed. full refresh.");
         EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, GC16_Mode);
     }
-
+    
     displayQuote();
     spdlog::info("displayed a new quote");
     refreshBuffer();
@@ -203,8 +221,9 @@ int main()
     
     // display the first quote
     lit_clock.getTime(lit_clock.bufferedHour, lit_clock.bufferedMinute);
-    std::vector<unsigned char> firstQuote = lit_clock.getImage(lit_clock.bufferedHour, lit_clock.bufferedMinute);
-    UBYTE* firstQuotePtr = firstQuote.data();
+    std::vector<unsigned char> firstImage8bpp = lit_clock.getImage(lit_clock.bufferedHour, lit_clock.bufferedMinute);
+    std::vector<unsigned char> firstImage4bpp = lit_clock.convertTo4bpp(firstImage8bpp);
+    UBYTE* firstQuotePtr = firstImage4bpp.data();
     EPD_IT8951_8bp_Refresh(firstQuotePtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr);
     spdlog::info("Displayed first quote");
     

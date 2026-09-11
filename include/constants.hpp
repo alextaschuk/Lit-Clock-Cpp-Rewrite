@@ -4,11 +4,10 @@
 
 #include <string>
 
-//inline constexpr int SCREEN_WIDTH = 800;
-//inline constexpr int SCREEN_HEIGHT = 480;
 inline constexpr int SCREEN_WIDTH = 1448;
 inline constexpr int SCREEN_HEIGHT = 1072;
-inline constexpr int IMAGE_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT;
+inline constexpr int IMAGE_SIZE_8BPP = SCREEN_WIDTH * SCREEN_HEIGHT;
+inline constexpr int IMAGE_SIZE_4BPP = (SCREEN_WIDTH + 1) / 2 * SCREEN_HEIGHT;
 inline constexpr double VCOM = -2.79;// set to VCOM value that's on the screen's FPC
 
 inline constexpr int BG_COLOR = 255;
@@ -26,4 +25,4 @@ inline constexpr float MIN_FONT_SCALE = 12.0f;
 inline constexpr float MAX_FONT_SCALE = 500.0f;
 
 inline constexpr int MAX_IMAGES_TO_BUFFER = 3; // buffer 3 images at a time.
-inline constexpr int BUFFER_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * MAX_IMAGES_TO_BUFFER;
+inline constexpr int BUFFER_SIZE = IMAGE_SIZE_4BPP * MAX_IMAGES_TO_BUFFER;

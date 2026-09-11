@@ -69,7 +69,7 @@ class LitClock
         // prevent ghosting.
         void tick_forward();
 
-        // Renders the image for the given time (hour:minute) and pushes it onto the buffer.
+        // Renders the image for the given time (hour:minute), converts it to 4bpp, and pushes it onto the buffer.
         //
         // hour: The hour (0-23) of the quote to render.
         // minute: The minute (0-60) of the quote to render.
@@ -78,6 +78,15 @@ class LitClock
         // Renders and buffers the image for the minute after quote that the buffer's `tail` is pointing to.
         void refreshBuffer();
 
+        // Converts an image's 8bpp (bits per pixel) buffer to 4bpp and returns the new 4bpp buffer.
+        //
+        // `Writer::generateQuoteImage()` returns a buffer for an image where each byte represents one pixel (thus,
+        // the image has a grayscale range of 0-255). Waveshare recommends using 4bpp for refreshing (grayscale
+        // range of 0-15) because " the amount of transmitted data is reduced by half, the transmission speed is
+        // twice as fast, and there is no difference in display effect."
+        //
+        // image: A flat buffer of an 8bpp image to convert to 4bpp
+        std::vector<unsigned char> convertTo4bpp(const std::vector<unsigned char>& image);
 
         // Pops the image from the front of the buffer (the image that the buffer's `head` is pointing to) and
         // displays it onto the screen.
