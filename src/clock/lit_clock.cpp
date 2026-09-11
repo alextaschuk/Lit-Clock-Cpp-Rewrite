@@ -131,7 +131,7 @@ void LitClock::displayQuote()
 {
     UBYTE* currentImagePtr = buffer.popImage();
     Paint_SelectImage(currentImagePtr);
-    EPD_IT8951_4bp_Refresh(currentImagePtr, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr, true);
+    EPD_IT8951_4bp_Refresh(currentImagePtr, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr, false);
 }
 
 
@@ -214,7 +214,7 @@ int main()
     std::vector<unsigned char> startupImage8bpp = lit_clock.writer.generateQuoteImage(startupMessage, false);
     std::vector<unsigned char> startupImage4bpp = lit_clock.convertTo4bpp(startupImage8bpp);
     UBYTE* startupMsgPtr = startupImage4bpp.data();
-    EPD_IT8951_4bp_Refresh(startupMsgPtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr, true);
+    EPD_IT8951_4bp_Refresh(startupMsgPtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr, false);
     spdlog::info("Displayed startup image");
     
     spdlog::info("Sleeping for 30 sec to let the RTC update");
@@ -225,7 +225,7 @@ int main()
     std::vector<unsigned char> firstImage8bpp = lit_clock.getImage(lit_clock.bufferedHour, lit_clock.bufferedMinute);
     std::vector<unsigned char> firstImage4bpp = lit_clock.convertTo4bpp(firstImage8bpp);
     UBYTE* firstQuotePtr = firstImage4bpp.data();
-    EPD_IT8951_4bp_Refresh(firstQuotePtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr, true);
+    EPD_IT8951_4bp_Refresh(firstQuotePtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr, false);
     spdlog::info("Displayed first quote");
     
     // initialize the buffer
