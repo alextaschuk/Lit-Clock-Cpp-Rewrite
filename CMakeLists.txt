@@ -32,12 +32,14 @@ target_link_libraries(it8951 PUBLIC bcm2835 pthread m)
 # Clock executable
 add_executable(clock
     src/writer.cpp
+    src/utils.cpp
     src/lit_clock.cpp
 )
 
 # Executable to save images to folder
 add_executable(save_images
     src/writer.cpp
+    src/utils.cpp
     src/save_images.cpp
 )
 

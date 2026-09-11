@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -8,10 +9,11 @@
 
 #include "stb_truetype.h"
 
+#include "delimiter.hpp"
 #include "utils.hpp"
 
 
-static float SCALE_MULTIPLIER = 0.99; // to constrain bboxes to make sure text fits
+static float SCALE_MULTIPLIER = 0.99f; // to constrain bboxes to make sure text fits
 
 
 // Stores the (x,y) coordinate pairs of the top left and bottom right corners of a bounding box.
@@ -40,53 +42,6 @@ struct Fonts {
     stbtt_fontinfo credit;
 };
 
-
-// Stores all delimiting characters to format one or more glyphs.
-//
-// `ITALIC`: Text wrapped with this delimiter is written using an italicized version of the font.
-//
-// `BOLD`: Text wrapped with this delimiter is written using a bolded version of the font.
-//  Note: This can be combined with the `ITALIC` delimiter to write text that is bold and italic.
-//
-// `TIMESTR`: The timestring part of the quote is automatically wrapped with this delimiter.
-//  Note: A timestring should never be manually wrapped in the quote CSV file because it is
-//      automatically found and wrapped when a quote is drawn.
-struct CharacterDelimiters {
-    std::string ITALIC  = "◻";  // U+25FB (White Medium Square)
-    std::string BOLD    = "◯";  // U+25EF (Large Circle)
-    std::string TIMESTR = "|";  // U+007C (Vertical Line)
-
-    std::vector<std::string> getCharDelims() const {
-        return { ITALIC, BOLD, TIMESTR };
-    }
-};
-
-// Stores delimiting characters to format one or more words.
-// 
-// `NEWLINE`: Insert a newline between the current and succeeding text. (Equivalent to pressing the
-//          enter/return key).
-// `DOUBLE_NEWLINE`: Insert two newlines between the current and succeeding text. (Equivalent to pressing
-//          the enter/return twice).
-// TODO: Just use \n for both
-struct WordDelimiters {
-    std::string NEWLINE         = "␤";  // U+2424 (Symbol For Newline)
-    std::string DOUBLE_NEWLINE  = "⇇";  // U+21C7 (Leftwards Paired Arrows
-
-    std::vector<std::string> getWordDelims() const {
-        return { NEWLINE, DOUBLE_NEWLINE };
-    }
-};
-
-// Defines a formatting delimiter and a variable to track how many of the delimiter have been seen in the text.
-//
-// character: The delmiting character (e.g. "◻").
-// count: How many times the character has been seen in the text.
-struct Delimiter {
-    std::string character;
-    int count = 0;
-
-    Delimiter(const std::string& c) : character(c) {}
-};
 
 // Tells the pen if it is writing a quote or a quote's credits.
 enum TextType {
@@ -127,17 +82,43 @@ class Writer {
     std::string text; // The text that the pen is writing.
     TextType textType = QUOTE; // is the text a quote or credits for a quote?
     Fonts fonts;
-    std::vector<Delimiter> charDelimiters = {
-        Delimiter(CharacterDelimiters().ITALIC),
-        Delimiter(CharacterDelimiters().BOLD),
-        Delimiter(CharacterDelimiters().TIMESTR),
+
+    std::array<Delimiter, 3> charDelimiters = { 
+    Delimiter{DelimiterType::Italic, CharacterDelimiters().ITALIC},
+    Delimiter{DelimiterType::Bold, CharacterDelimiters().BOLD},
+    Delimiter{DelimiterType::Time, CharacterDelimiters().TIMESTR}
     };
 
-    // Move the pen to some (x,y) coordinate and and set all delimiter counters to 0.
-    void resetPen (int x_pos, int y_pos)
-    {
+    // get a character delimiter from charDelimiters by passing in its type
+    Delimiter& getDelimiter(DelimiterType type) {
+        return charDelimiters[static_cast<size_t>(type)];
+    }
+
+    // find which delimiter a character represents
+    Delimiter* findDelimiter(const std::string& character) {
+        for (auto& delim : charDelimiters) {
+            if (delim.character == character)
+                return &delim;
+        }
+        return nullptr;
+    }
+
+    // Move the pen to some (x,y) coordinate.
+    void resetPen (int x_pos, int y_pos) {
         pen.x = x_pos;
         pen.y = y_pos;
+    }
+
+    // Set all character delimiter counters to 0.
+    //void resetCharDelimCount() {
+    //    for (Delimiter &delim : charDelimiters) {
+    //        if (delim.count >= 2) {
+    //            delim.count = 0;
+    //            pen.font = fonts.regular;
+    //        }
+    //    }
+    //}
+    void resetCharDelimCount() {
         for (Delimiter& d : charDelimiters) { d.count = 0; }
     }
 
@@ -254,21 +235,6 @@ class Writer {
     //
     // Mutates: `bbox.topLeftX` and `bbox.topLeftY`, in place, on the calling Writer.
     void resizeCreditBbox(const std::string& wrappedLines);
-
-
-    // Decodes a single Unicode codepoint from a UTF-8 encoded string, starting at the given byte offset.
-    //
-    // s: The UTF-8-encoded string to decode from.
-    // i: the byte offset within s at which to begin decoding. Must point to the first byte of a valid UTF-8 sequence 
-    //      (not a continuation byte).
-    // numBytes: output parameter. Set to the number of bytes consumed by the decoded codepoint (1-4), so the caller can
-    //      advance their index by this amount. Any prior value is overwritten.
-    //
-    // Returns the decoded Unicode codepoint in base 10.
-    //
-    // See the function's definition for more details.
-    int decodeUTF8(const std::string& s, size_t i, int& numBytes);
-
 
     // Initalize a stb font.
     //
