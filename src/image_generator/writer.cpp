@@ -7,9 +7,9 @@
 #include <unordered_map>
 
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
+#include "stb/stb_truetype.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "stb/stb_image_write.h"
 
 #include "constants.hpp"
 #include "image_generator/delimiter.hpp"

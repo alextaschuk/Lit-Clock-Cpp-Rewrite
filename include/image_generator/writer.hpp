@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "stb_truetype.h"
+#include "stb/stb_truetype.h"
 
 #include "delimiter.hpp"
 #include "utils.hpp"

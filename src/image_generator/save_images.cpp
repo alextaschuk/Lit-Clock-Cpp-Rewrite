@@ -5,7 +5,7 @@
 #include <iostream>
 #include <print>
 
-#include "stb_image_write.h"
+#include "stb/stb_image_write.h"
 
 #include "constants.hpp"
 #include "utils.hpp"
