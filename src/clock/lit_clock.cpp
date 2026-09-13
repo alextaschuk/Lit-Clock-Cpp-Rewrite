@@ -1,22 +1,23 @@
 #include "clock/lit_clock.hpp"
 
-#include <cstddef>
-#include <string>
-#include <unordered_map>
-#include <print>
-#include <vector>
-#include <random>
-#include <thread>
 #include <chrono>
-#include <ctime>
+#include <cstddef>
 #include <cstdlib>
+#include <ctime>
+#include <string>
+#include <print>
+#include <random>
 #include <signal.h>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 
-#include "constants.hpp"
 #include "spdlog/spdlog.h"
-#include "utils.hpp"
 #include "waveshare-IT8951/lib/Config/DEV_Config.h"
 #include "image_generator/writer.hpp"
+
+#include "constants.hpp"
+#include "utils.hpp"
 
 void LitClock::cacheQuotes()
 {    
@@ -63,6 +64,7 @@ void LitClock::cacheQuotes()
         int rowHour = std::stoi(currRow["time"].substr(0, 2));
         int currMin = std::stoi(currTime.substr(3));
         int currHour = std::stoi(currTime.substr(0, 2));
+
         if(rowMin - 1 == currMin)
         { /* Roll over to the next minute */
             quotes.push_back(minRows);
@@ -78,7 +80,7 @@ void LitClock::cacheQuotes()
         minRows.push_back(currRow);
     }
     minRows.push_back(currRow);
-    spdlog::info("Successfully cached {0:d} quotes.", quoteCount);
+    spdlog::info("Cached {0:d} quotes.", quoteCount);
 }
 
 
@@ -114,12 +116,7 @@ std::vector<unsigned char> LitClock::convertTo4bpp(const std::vector<unsigned ch
             // According to Waveshare's docs, the even pixel goes in the low nibble,
             // and the odd pixel goes in the even nibble.
             // See https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#About_bpp
-            if ((col & 1) == 0) {
-                packed[outByteIdx] |= pixel4bpp;
-            } else {
-                // Waveshare: odd pixel goes in HIGH nibble.
-                packed[outByteIdx] |= pixel4bpp << 4;
-            }
+            packed[outByteIdx] |= ((col & 1) == 0) ? pixel4bpp : pixel4bpp << 4;
         }
     }
 
@@ -195,14 +192,9 @@ void Handler(int signo)
 }
 
 
-int main()
+// Displays a message while the clock waits for the Pi to update its RTC.
+void displayStartupMsg(LitClock lit_clock)
 {
-    //Exception handling:ctrl + c
-    signal(SIGINT, Handler);
-
-    LitClock lit_clock;
-
-    //display startup screen
     std::unordered_map<std::string, std::string> startupMessage = 
     {
         {"time", "00:00"},
@@ -216,17 +208,33 @@ int main()
     UBYTE* startupMsgPtr = startupImage4bpp.data();
     EPD_IT8951_4bp_Refresh(startupMsgPtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr, false);
     spdlog::info("Displayed startup image");
-    
-    spdlog::info("Sleeping for 30 sec to let the RTC update");
-    std::this_thread::sleep_for(std::chrono::seconds(30));
-    
-    // display the first quote
+}
+
+
+// Displays the first quote after the Pi's RTC has updated.
+void displayFirstImage(LitClock lit_clock)
+{
     lit_clock.getTime(lit_clock.bufferedHour, lit_clock.bufferedMinute);
     std::vector<unsigned char> firstImage8bpp = lit_clock.getImage(lit_clock.bufferedHour, lit_clock.bufferedMinute);
     std::vector<unsigned char> firstImage4bpp = lit_clock.convertTo4bpp(firstImage8bpp);
     UBYTE* firstQuotePtr = firstImage4bpp.data();
     EPD_IT8951_4bp_Refresh(firstQuotePtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr, false);
     spdlog::info("Displayed first quote");
+}
+
+
+int main()
+{
+    //Exception handling:ctrl + c
+    signal(SIGINT, Handler);
+
+    LitClock lit_clock;
+    displayStartupMsg(lit_clock);
+
+    spdlog::info("Sleeping for 30 sec to let the RTC update");
+    std::this_thread::sleep_for(std::chrono::seconds(30));
+    
+    displayFirstImage(lit_clock);
     
     // initialize the buffer
     for (int i = 0; i < MAX_IMAGES_TO_BUFFER; i++) {

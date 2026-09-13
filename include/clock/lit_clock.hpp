@@ -12,8 +12,8 @@ extern "C" {
 #include "spdlog/spdlog.h" // logger
 
 #include "constants.hpp"
-#include "image_generator/writer.hpp"
 #include "image_buffer.hpp"
+#include "image_generator/writer.hpp"
 
 
 class LitClock

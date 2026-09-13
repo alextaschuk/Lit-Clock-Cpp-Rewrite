@@ -1,10 +1,4 @@
 #include "image_generator/writer.hpp"
-#include "image_generator/delimiter.hpp"
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
 
 #include <algorithm>
 #include <print>
@@ -12,7 +6,13 @@
 #include <string>
 #include <unordered_map>
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #include "constants.hpp"
+#include "image_generator/delimiter.hpp"
 
 
 int Writer::maxAscender(const std::string& line)
@@ -270,16 +270,19 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word)
         std::vector<unsigned char> glyphBuf(glyphWidth * glyphHeight, 0);
         stbtt_MakeCodepointBitmap(&pen.font, glyphBuf.data(), glyphWidth, glyphHeight, glyphWidth, pen.fontScale, pen.fontScale, codepoint);
             
-        for (int row = 0; row < glyphHeight; ++row) {
-            for (int col = 0; col < glyphWidth; ++col) {
+        for (int row = 0; row < glyphHeight; ++row)
+        {
+            for (int col = 0; col < glyphWidth; ++col)
+            {
                 int destX = drawX + col; // The rasterized glyph's x coordinate of the current pixel
                 int destY = drawY + row; // The rasterized glyph's y coordinate of the current pixel
 
                 // make sure the pixel fits
-                if (destX > bbox.bottomRightX && glyphBuf[row * glyphWidth + col] > 0) {
-                    //std::println("destX: {}", destX); // how is it able to write past?
-                }
-                if (destX >= bbox.topLeftX && destX < bbox.bottomRightX && destY >= bbox.topLeftY && destY < bbox.bottomRightY)
+                if (destX >= bbox.topLeftX &&
+                    destX < bbox.bottomRightX &&
+                    destY >= bbox.topLeftY &&
+                    destY < bbox.bottomRightY
+                    )
                 {
                     unsigned char glyphPixel = glyphBuf[row * glyphWidth + col]; // foreground pixel
                     if (glyphPixel > 0) // only want non-background pixels
@@ -381,28 +384,30 @@ std::vector<unsigned char> Writer::generateQuoteImage(std::unordered_map<std::st
 
     /* leave some room around the screen so that text isn't written right up to its edges. */
     BoundingBox quoteBBox;
-    quoteBBox.topLeftX =  static_cast<int>(std::floor(SCREEN_WIDTH - SCREEN_WIDTH * SCALE_MULTIPLIER));
-    quoteBBox.topLeftY = static_cast<int>(std::floor(SCREEN_HEIGHT - SCREEN_HEIGHT * SCALE_MULTIPLIER));
-    quoteBBox.bottomRightX = static_cast<int>(std::floor(SCREEN_WIDTH * SCALE_MULTIPLIER));
-    quoteBBox.bottomRightY = static_cast<int>(std::floor(SCREEN_HEIGHT * SCALE_MULTIPLIER));
+    quoteBBox.topLeftX      =  static_cast<int>(std::floor(SCREEN_WIDTH - SCREEN_WIDTH * SCALE_MULTIPLIER));
+    quoteBBox.topLeftY      = static_cast<int>(std::floor(SCREEN_HEIGHT - SCREEN_HEIGHT * SCALE_MULTIPLIER));
+    quoteBBox.bottomRightX  = static_cast<int>(std::floor(SCREEN_WIDTH * SCALE_MULTIPLIER));
+    quoteBBox.bottomRightY  = static_cast<int>(std::floor(SCREEN_HEIGHT * SCALE_MULTIPLIER));
 
     if (includeCredits)
     {
-        textType = CREDITS;
-        pen.color = CREDIT_COLOR;
-        text = "—" + row["title"] + ", " + WordDelimiters().NEWLINE + row["author"];
-        bbox.topLeftX     = static_cast<int>(std::floor(SCREEN_WIDTH * 0.45));
-        bbox.topLeftY     = static_cast<int>(std::floor(SCREEN_HEIGHT * 0.85));
-        bbox.bottomRightX = static_cast<int>(std::floor(SCREEN_WIDTH * SCALE_MULTIPLIER));
-        bbox.bottomRightY = static_cast<int>(std::floor(SCREEN_HEIGHT * SCALE_MULTIPLIER));
+        textType            = CREDITS;
+        pen.color           = CREDIT_COLOR;
+        text                = "—" + row["title"] + ", " + WordDelimiters().NEWLINE + row["author"];
+        bbox.topLeftX       = static_cast<int>(std::floor(SCREEN_WIDTH * 0.45));
+        bbox.topLeftY       = static_cast<int>(std::floor(SCREEN_HEIGHT * 0.85));
+        bbox.bottomRightX   = static_cast<int>(std::floor(SCREEN_WIDTH * SCALE_MULTIPLIER));
+        bbox.bottomRightY   = static_cast<int>(std::floor(SCREEN_HEIGHT * SCALE_MULTIPLIER));
+        
         writeInBBox(image, row);
         quoteBBox.bottomRightY = static_cast<int>(std::floor(bbox.topLeftY * SCALE_MULTIPLIER));
     }
 
-    textType = QUOTE;
-    pen.color = QUOTE_COLOR;
-    text = row["quote"];
-    bbox = quoteBBox;
+    textType    = QUOTE;
+    pen.color   = QUOTE_COLOR;
+    text        = row["quote"];
+    bbox        = quoteBBox;
+
     writeInBBox(image, row);
     resetPen(bbox.topLeftX, bbox.topLeftY);
     resetCharDelimCount();

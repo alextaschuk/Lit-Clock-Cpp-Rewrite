@@ -1,8 +1,10 @@
 #include "clock/image_buffer.hpp"
-#include "constants.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <stdexcept>
+
+#include "constants.hpp"
 
 void ImageBuffer::pushImage(const std::vector<unsigned char>& image)
 {
