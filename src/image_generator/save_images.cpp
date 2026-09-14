@@ -12,6 +12,16 @@
 
 void Writer::saveImages()
 {
+    try {
+        initFont(projectPath("/share/fonts/Bookerly.ttf"), fonts.regularBuf, fonts.regular);
+        initFont(projectPath("/share/fonts/Bookerly-Italic.ttf"), fonts.italicBuf, fonts.italic);
+        initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.boldBuf, fonts.bold);
+        initFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), fonts.italicBoldBuf, fonts.italicBold);
+        initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.creditBuf, fonts.credit);
+    } catch (const std::runtime_error) {
+        std::println("Error: Failed to initialize fonts.");
+    }
+
     std::unordered_map<std::string, std::string> row = 
     {
         {"time", ""},

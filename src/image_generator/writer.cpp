@@ -370,16 +370,6 @@ std::vector<unsigned char> Writer::generateQuoteImage(std::unordered_map<std::st
 {
     std::vector<unsigned char> image(SCREEN_WIDTH * SCREEN_HEIGHT, BG_COLOR);
 
-    try {
-        initFont(projectPath("/share/fonts/Bookerly.ttf"), fonts.regularBuf, fonts.regular);
-        initFont(projectPath("/share/fonts/Bookerly-Italic.ttf"), fonts.italicBuf, fonts.italic);
-        initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.boldBuf, fonts.bold);
-        initFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), fonts.italicBoldBuf, fonts.italicBold);
-        initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.creditBuf, fonts.credit);
-    } catch (const std::runtime_error) {
-        std::println("Error: Failed to initialize fonts.");
-    }
-
     pen.font = fonts.regular;
 
     /* leave some room around the screen so that text isn't written right up to its edges. */
