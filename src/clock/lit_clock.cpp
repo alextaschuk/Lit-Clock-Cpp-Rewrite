@@ -193,7 +193,7 @@ void Handler(int signo)
 
 
 // Displays a message while the clock waits for the Pi to update its RTC.
-void displayStartupMsg(LitClock lit_clock)
+void displayStartupMsg(LitClock& lit_clock)
 {
     std::unordered_map<std::string, std::string> startupMessage = 
     {
@@ -212,7 +212,7 @@ void displayStartupMsg(LitClock lit_clock)
 
 
 // Displays the first quote after the Pi's RTC has updated.
-void displayFirstImage(LitClock lit_clock)
+void displayFirstImage(LitClock& lit_clock)
 {
     lit_clock.getTime(lit_clock.bufferedHour, lit_clock.bufferedMinute);
     std::vector<unsigned char> firstImage8bpp = lit_clock.getImage(lit_clock.bufferedHour, lit_clock.bufferedMinute);

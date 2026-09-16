@@ -64,6 +64,7 @@ struct Pen {
 class Writer {
   public:
     BoundingBox bbox; // An area that the pen must write inside of.
+    Fonts fonts; // Stores all fonts that could be used to write a quote or its credits.
 
     // Generate an image of a single quote.
     //
@@ -77,12 +78,29 @@ class Writer {
     //
     // Each row in the CSV is parsed to create an image of each quote.
     void saveImages();
+
+
+    // Initalizes a stb font.
+    //
+    // fontPath: File path to a TrueType or OpenType file.
+    // outBuf: output parameter. A byte buffer of the font file. 
+    // outFont: output parameter. A font profile used for font-related tasks, such as drawing a glyph.
+    void initFont(const std::string& fontPath, std::vector<unsigned char>& outBuf, stbtt_fontinfo& outFont) {
+        std::ifstream fontStream(fontPath, std::ios::binary); // read the entire font file into a buffer
+        if (!fontStream) {
+            throw std::runtime_error("Failed to open font file: " + fontPath);
+        }
+
+        outBuf = std::vector<unsigned char>(std::istreambuf_iterator<char>(fontStream), {});
+        if (!stbtt_InitFont(&outFont, outBuf.data(), 0)) {
+            throw std::runtime_error("stbtt_InitFont failed.");
+        }
+    }
     
   private:  
     Pen pen; // The pen to write the text with.
     std::string text; // The text that the pen is writing.
     TextType textType = QUOTE; // Tells the writer if the current text is a quote or credits for a quote.
-    Fonts fonts; // Stores all fonts that could be used to write a quote or its credits.
 
     // An array of `Delimiters` that are used to format one or more characters in a text.
     std::array<Delimiter, static_cast<int>(DelimiterType::Count)> charDelimiters = { 
@@ -234,22 +252,4 @@ class Writer {
     //
     // Mutates: `bbox.topLeftX` and `bbox.topLeftY`, in place, on the calling Writer.
     void resizeCreditBbox(const std::string& wrappedLines);
-
-
-    // Initalizes a stb font.
-    //
-    // fontPath: File path to a TrueType or OpenType file.
-    // outBuf: output parameter. A byte buffer of the font file. 
-    // outFont: output parameter. A font profile used for font-related tasks, such as drawing a glyph.
-    void initFont(const std::string& fontPath, std::vector<unsigned char>& outBuf, stbtt_fontinfo& outFont) {
-        std::ifstream fontStream(fontPath, std::ios::binary); // read the entire font file into a buffer
-        if (!fontStream) {
-            throw std::runtime_error("Failed to open font file: " + fontPath);
-        }
-
-        outBuf = std::vector<unsigned char>(std::istreambuf_iterator<char>(fontStream), {});
-        if (!stbtt_InitFont(&outFont, outBuf.data(), 0)) {
-            throw std::runtime_error("stbtt_InitFont failed.");
-        }
-    }
 };

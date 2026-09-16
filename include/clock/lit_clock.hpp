@@ -44,6 +44,16 @@ class LitClock
             spdlog::info("Initial Waveshare screen config complete");
 
             cacheQuotes();
+
+            try {
+                writer.initFont(projectPath("/share/fonts/Bookerly.ttf"), writer.fonts.regularBuf, writer.fonts.regular);
+                writer.initFont(projectPath("/share/fonts/Bookerly-Italic.ttf"), writer.fonts.italicBuf, writer.fonts.italic);
+                writer.initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), writer.fonts.boldBuf, writer.fonts.bold);
+                writer.initFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), writer.fonts.italicBoldBuf, writer.fonts.italicBold);
+                writer.initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), writer.fonts.creditBuf, writer.fonts.credit);
+            } catch (const std::runtime_error) {
+                std::println("Error: Failed to initialize fonts.");
+            }
         }
 
         Writer writer;
