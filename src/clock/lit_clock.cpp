@@ -19,12 +19,11 @@
 #include "constants.hpp"
 #include "utils.hpp"
 
-void LitClock::cacheQuotes()
+int LitClock::cacheQuotes()
 {    
     std::ifstream quoteFile(projectPath(QUOTES_PATH));
     if (!quoteFile.is_open()) {
-        std::println("Error: Failed to open quotes file.");
-        return;
+        return -1;
     }
 
     std::string line;
@@ -79,8 +78,9 @@ void LitClock::cacheQuotes()
         }
         minRows.push_back(currRow);
     }
+    
     minRows.push_back(currRow);
-    spdlog::info("Cached {0:d} quotes.", quoteCount);
+    return quoteCount;
 }
 
 
@@ -108,8 +108,10 @@ std::vector<unsigned char> LitClock::convertTo4bpp(const std::vector<unsigned ch
     const int bytesPerRow = (Panel_Width + 1) / 2;
     std::vector<unsigned char> packed(bytesPerRow * Panel_Height, 0);
 
-    for (int row = 0; row < Panel_Height; ++row) {
-        for (int col = 0; col < Panel_Width; ++col) {
+    for (int row = 0; row < Panel_Height; ++row)
+    {
+        for (int col = 0; col < Panel_Width; ++col)
+        {
             const unsigned char pixel4bpp = image[row * Panel_Width + col] >> 4;
             const int outByteIdx = row * bytesPerRow + col / 2;
 
@@ -222,6 +224,20 @@ void displayFirstImage(LitClock& lit_clock)
     spdlog::info("Displayed first quote");
 }
 
+// Determines how long the clock's loop in main() should sleep before the next call to tick_forward().
+//
+// It takes ~3 seconds for tick_forward() to complete (most of this is for the screen to update with a
+// new image to display). So tick_forward() is called at the 57th second of every minute. It's possible
+// the function takes less than 3 seconds to return so we need to make sure that the loop sleeps until
+// the next 57th second.
+int sleepDuration(int currSecond)
+{
+    if (currSecond < 57)
+        return 57 - currSecond;
+    else
+        return 57 - currSecond + 60;
+}
+
 
 int main()
 {
@@ -246,8 +262,7 @@ int main()
     std::time_t t = std::time(nullptr);
     std::tm* localTime = std::localtime(&t);
     int currSecond = localTime->tm_sec;
-    spdlog::info("sleeping for {} seconds", 57 - currSecond);
-    std::this_thread::sleep_for(std::chrono::seconds(57 - currSecond)); // sleep until next min
+    std::this_thread::sleep_for(std::chrono::seconds(sleepDuration(currSecond))); // sleep until next min
     
     // This is bad practice, but it ensures that anything I might've missed is caught
     // so that the screen can be cleared before the program exits.
@@ -261,8 +276,8 @@ int main()
             std::time_t t = std::time(nullptr);
             std::tm* localTime = std::localtime(&t);
             int currSecond = localTime->tm_sec;
-            spdlog::info("going to sleep for {} seconds", 57 - currSecond);
-            std::this_thread::sleep_for(std::chrono::seconds(57 - currSecond));
+            //spdlog::info("going to sleep for {} seconds", 57 - currSecond);
+            std::this_thread::sleep_for(std::chrono::seconds(sleepDuration(currSecond)));
             spdlog::info("woke up to display next quote.");
         }
     } catch (...)
