@@ -6,7 +6,8 @@
 
 [Unit]
 Description = C++ Book Quote Clock
-After=network-online.target
+After=network-online.target CPP_clock_build.service
+Requires=CPP_clock_build.service
 
 [Service]
 Type=simple

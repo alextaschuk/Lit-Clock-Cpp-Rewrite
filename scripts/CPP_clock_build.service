@@ -1,0 +1,13 @@
+# This script is to be run before CPP_clock.service on startup.
+# It builds the clock's binary.
+
+[Unit]
+Description=Builds the C++ Book Quote Clock
+
+[Service]
+Type=oneshot
+WorkingDirectory=/path/to/clock/build
+ExecStart=/usr/bin/cmake --build .
+
+[Install]
+WantedBy=multi-user.target
