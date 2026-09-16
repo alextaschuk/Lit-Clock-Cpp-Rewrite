@@ -356,7 +356,7 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
         {
             std::string msg = std::format("time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
             std::println("Error: {}", msg);
-            text = std::format("◯Error◯ {}", msg);
+            text = std::format("*Error* {}", msg);
         }
         else
         {
