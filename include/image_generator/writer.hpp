@@ -57,6 +57,7 @@ struct Pen {
     short int color = 128; // grayscale value (0-255) to draw text with.
     int x = 0; // X coordinate of the pen's position on the image.
     int y = 0; // Y coordinate of the pen's position on the image.
+    bool pendingEscape = false; // insert a backslash before a delimiter to treat it as a normal character.
 };
 
 
@@ -84,7 +85,7 @@ class Writer {
     Fonts fonts; // Stores all fonts that could be used to write a quote or its credits.
 
     // An array of `Delimiters` that are used to format one or more characters in a text.
-    std::array<Delimiter, 3> charDelimiters = { 
+    std::array<Delimiter, static_cast<int>(DelimiterType::Count)> charDelimiters = { 
     Delimiter{DelimiterType::Italic, CharacterDelimiters().ITALIC},
     Delimiter{DelimiterType::Bold, CharacterDelimiters().BOLD},
     Delimiter{DelimiterType::Time, CharacterDelimiters().TIMESTR}
@@ -151,7 +152,8 @@ class Writer {
     //
     // image: Bitmap of the image to write on.
     // word: The word to be written.
-    void drawWord(std::vector<unsigned char>& image, std::string word);
+    // isLast: `true` if the word is the last word of a line (to skip adding a space after the last word in a line)
+    void drawWord(std::vector<unsigned char>& image, std::string word, bool isLast);
 
 
     // Determines which font and color should be used to write a character. If the character is a delimiter, an empty string is returned.

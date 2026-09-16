@@ -1,10 +1,15 @@
 #include "image_generator/writer.hpp"
+#include "utils.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
 #include <print>
 #include <cctype>
 #include <string>
 #include <unordered_map>
+#include <vector>
+//#include <omp.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
@@ -45,7 +50,12 @@ void Writer::resizeCreditBbox(const std::string& wrappedLines)
         {
             int numBytes;
             int codepoint = decodeUTF8(line, i, numBytes);
+
+            std::string currCharacter = formatChar(pen, line.substr(i, numBytes));
             i += numBytes;
+            if (currCharacter.empty()) {
+                continue;
+            }
 
             int advanceWidth;
             stbtt_GetCodepointHMetrics(&pen.font, codepoint, &advanceWidth, 0); 
@@ -62,27 +72,35 @@ void Writer::resizeCreditBbox(const std::string& wrappedLines)
 
 std::string Writer::formatChar(Pen& pen, std::string character)
 {
-    // skip if character is a WordDelimiter.
-    std::vector<std::string> wordDelims = WordDelimiters().getWordDelims();
-    if (std::find(wordDelims.begin(), wordDelims.end(), character) != wordDelims.end()) {
-        return "";
-    }
-
-    if (auto* delim = findDelimiter(character))
+    if (pen.pendingEscape) 
     {
-        ++delim->count;
-        character = "";
+        pen.pendingEscape = false;
+    }
+    else
+    {
+        // skip if character is a WordDelimiter.
+        std::vector<std::string> wordDelims = WordDelimiters().getWordDelims();
+        const bool charIsWordDelim = std::find(wordDelims.begin(), wordDelims.end(), character) != wordDelims.end();
+        if (charIsWordDelim) {
+            return "";
+        }
+
+        if (character == "\\") {
+            pen.pendingEscape = true;
+            character = "";
+        } else if (auto* delim = findDelimiter(character)) {
+            ++delim->count;
+            character = "";
+        }
     }
 
-    // Get the current state of each delimiter.
     const bool italicActive = getDelimiter(DelimiterType::Italic).count % 2 == 1;
     const bool boldActive = getDelimiter(DelimiterType::Bold).count % 2 == 1;
     const bool timeActive = getDelimiter(DelimiterType::Time).count % 2 == 1;
 
-    // Set font/color based on active delimiters.
     if (italicActive) {
         pen.font = boldActive || timeActive ? fonts.italicBold : fonts.italic;
-        pen.color = timeActive ? TIME_COLOR : QUOTE_COLOR;
+        pen.color = timeActive || textType == CREDITS ? TIME_COLOR : QUOTE_COLOR;
     } else if (boldActive) {
         pen.font = fonts.bold;
         pen.color = timeActive ? TIME_COLOR : QUOTE_COLOR;
@@ -91,8 +109,9 @@ std::string Writer::formatChar(Pen& pen, std::string character)
         pen.color = TIME_COLOR;
     } else {
         pen.font = fonts.regular;
-        pen.color = (textType == QUOTE) ? QUOTE_COLOR : TIME_COLOR;
+        pen.color = (textType == CREDITS) ? TIME_COLOR : QUOTE_COLOR;
     }
+    
     return character;
 }
 
@@ -145,7 +164,6 @@ std::string Writer::wrapText(Pen& pen)
 
             int advanceWidth;
             stbtt_GetCodepointHMetrics(&pen.font, codepoint, &advanceWidth, 0);    
-
             wordLengthF += (advanceWidth * pen.fontScale);
             j += numBytes;
         }
@@ -220,7 +238,7 @@ void Writer::findOptimalFontScale(std::string& wrappedLines)
 }
 
 
-void Writer::drawWord(std::vector<unsigned char>& image, std::string word)
+void Writer::drawWord(std::vector<unsigned char>& image, std::string word, bool isLast)
 {
     for (size_t i = 0; i < word.length(); )
     {
@@ -310,10 +328,12 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word)
         i += numBytes;
     }
         
-    // add the length of a space after each word
-    int advanceWidth;
-    stbtt_GetCodepointHMetrics(&pen.font, ' ', &advanceWidth, 0);
-    pen.x += advanceWidth * pen.fontScale;
+    if (!isLast)
+    { /* add the length of a space after each word (except for the last) */
+        int advanceWidth;
+        stbtt_GetCodepointHMetrics(&pen.font, ' ', &advanceWidth, 0);
+        pen.x += advanceWidth * pen.fontScale;
+    }
 
     for (Delimiter &delim : charDelimiters)
     { /* reset delimiters whose wrapping is complete*/
@@ -332,11 +352,14 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
     if (textType == QUOTE)
     {
         size_t timestrBegin = 0, timestrEnd = 0;
-        if (findTimestrIndices(row, timestrBegin, timestrEnd) < 0) {
+        if (findTimestrIndices(row, timestrBegin, timestrEnd) < 0)
+        {
             std::string msg = std::format("time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
             std::println("Error: {}", msg);
             text = std::format("◯Error◯ {}", msg);
-        } else {
+        }
+        else
+        {
             std::string delim = CharacterDelimiters().TIMESTR;
             text = row["quote"].substr(0, timestrBegin);
             text += delim + row["quote"].substr(timestrBegin, timestrEnd - timestrBegin) + delim;
@@ -356,9 +379,12 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
         pen.x = bbox.topLeftX;
         pen.y -= lineHeight;
 
-        for (const std::string& word : split(line, " ")) {
-            drawWord(image, word);
+        std::vector<std::string> words = split(line, " ");
+        for (size_t i = 0; i < words.size(); ++i) {
+            bool isLastWord = (i == words.size() - 1);
+            drawWord(image, words[i], isLastWord);
         }
+        
         pen.y += getLineHeight(pen.font, pen.fontScale) + lineHeight; // move to the next line and continue drawing
     }
     resetPen(bbox.topLeftX, bbox.topLeftY);
@@ -383,7 +409,7 @@ std::vector<unsigned char> Writer::generateQuoteImage(std::unordered_map<std::st
     {
         textType            = CREDITS;
         pen.color           = CREDIT_COLOR;
-        text                = "—" + row["title"] + ", " + WordDelimiters().NEWLINE + row["author"];
+        text                = "_" + row["title"] + "_, " + WordDelimiters().NEWLINE + row["author"];
         bbox.topLeftX       = static_cast<int>(std::floor(SCREEN_WIDTH * 0.45));
         bbox.topLeftY       = static_cast<int>(std::floor(SCREEN_HEIGHT * 0.85));
         bbox.bottomRightX   = static_cast<int>(std::floor(SCREEN_WIDTH * SCALE_MULTIPLIER));
