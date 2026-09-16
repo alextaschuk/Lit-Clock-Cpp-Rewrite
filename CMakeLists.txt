@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
-project(lit_clock)
+project(LiteraryClock)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
+
+find_package(OpenMP REQUIRED)
 
 # sbdlog submodule for logging
 add_subdirectory(extern/spdlog)
@@ -31,15 +33,16 @@ target_link_libraries(it8951 PUBLIC bcm2835 pthread m)
 
 # Clock executable
 add_executable(clock
+    src/clock/clock.cpp
+    src/clock/horologium.cpp
     src/clock/image_buffer.cpp
-    src/clock/lit_clock.cpp
     src/image_generator/writer.cpp
     src/utils.cpp
 )
 
 # Executable to save images to folder
 add_executable(save_images
-src/image_generator/save_images.cpp
+    src/image_generator/save_images.cpp
     src/image_generator/writer.cpp
     src/utils.cpp
 )
@@ -47,8 +50,8 @@ src/image_generator/save_images.cpp
 target_include_directories(clock PRIVATE include extern)
 target_include_directories(save_images PRIVATE include extern)
 
-target_link_libraries(clock PRIVATE it8951 spdlog::spdlog)
-target_link_libraries(save_images PRIVATE it8951 spdlog::spdlog)
+target_link_libraries(clock PRIVATE it8951 spdlog::spdlog OpenMP::OpenMP_CXX)
+target_link_libraries(save_images PRIVATE it8951 spdlog::spdlog OpenMP::OpenMP_CXX)
 
 target_compile_definitions(clock PRIVATE PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 target_compile_definitions(save_images PRIVATE PROJECT_ROOT="${CMAKE_SOURCE_DIR}")

@@ -1,14 +1,11 @@
-#include "clock/lit_clock.hpp"
+#include "clock/horologium.hpp"
 
-#include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
 #include <string>
 #include <print>
 #include <random>
-#include <signal.h>
-#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -19,7 +16,7 @@
 #include "constants.hpp"
 #include "utils.hpp"
 
-int LitClock::cacheQuotes()
+int Horologium::cacheQuotes()
 {    
     std::ifstream quoteFile(projectPath(QUOTES_PATH));
     if (!quoteFile.is_open()) { return -1; }
@@ -82,7 +79,7 @@ int LitClock::cacheQuotes()
 }
 
 
-std::vector<unsigned char> LitClock::getImage(const size_t& quoteHour, const size_t& quoteMin)
+std::vector<unsigned char> Horologium::getImage(const size_t& quoteHour, const size_t& quoteMin)
 {
     std::string minute = (quoteMin < 10) ? "0" + std::to_string(quoteMin) : std::to_string((quoteMin));
     std::string hour = (quoteHour < 10) ? "0" + std::to_string(quoteHour) : std::to_string(quoteHour);
@@ -101,7 +98,7 @@ std::vector<unsigned char> LitClock::getImage(const size_t& quoteHour, const siz
 }
 
 
-std::vector<unsigned char> LitClock::convertTo4bpp(const std::vector<unsigned char>& image)
+std::vector<unsigned char> Horologium::convertTo4bpp(const std::vector<unsigned char>& image)
 {
     const int bytesPerRow = (Panel_Width + 1) / 2;
     std::vector<unsigned char> packed(bytesPerRow * Panel_Height, 0);
@@ -124,7 +121,7 @@ std::vector<unsigned char> LitClock::convertTo4bpp(const std::vector<unsigned ch
 }
 
 
-void LitClock::displayQuote()
+void Horologium::displayQuote()
 {
     UBYTE* currentImagePtr = buffer.popImage();
     Paint_SelectImage(currentImagePtr);
@@ -132,7 +129,7 @@ void LitClock::displayQuote()
 }
 
 
-void LitClock::bufferImage(size_t hour, size_t minute)
+void Horologium::bufferImage(size_t hour, size_t minute)
 {
     std::vector<unsigned char> image8bpp = getImage(hour, minute);
     std::vector<unsigned char> packed4bpp = convertTo4bpp(getImage(hour, minute));
@@ -140,24 +137,23 @@ void LitClock::bufferImage(size_t hour, size_t minute)
 }
 
 
-void LitClock::refreshBuffer()
+void Horologium::refreshBuffer()
 {
     advanceTime(bufferedHour,bufferedMinute);
     bufferImage(bufferedHour, bufferedMinute);
 }
 
 
-void LitClock::getTime(size_t& hour, size_t& minute)
+void Horologium::getTime(size_t& hour, size_t& minute)
 {
-    std::time_t t = std::time(nullptr);   // current time, as a raw timestamp
-    std::tm* localTime = std::localtime(&t);   // breaks it into local-time components
-
+    std::time_t t = std::time(nullptr);
+    std::tm* localTime = std::localtime(&t);
     hour = localTime->tm_hour;
     minute = localTime->tm_min;
 }
 
 
-void LitClock::advanceTime(size_t& hour, size_t& minute)
+void Horologium::advanceTime(size_t& hour, size_t& minute)
 {
     if (minute == 59) {
         minute = 0;
@@ -168,7 +164,7 @@ void LitClock::advanceTime(size_t& hour, size_t& minute)
 }
 
 
-void LitClock::tick_forward()
+void Horologium::tick_forward()
 {
     size_t currHour = 0, currMin = 0;
     getTime(currHour, currMin);
@@ -181,107 +177,4 @@ void LitClock::tick_forward()
     spdlog::info("displayed a new quote");
     refreshBuffer();
     spdlog::info("refreshed the buffer");
-}
-
-
-void Handler(int signo)
-{
-    std::println("ctrl + c detected.");
-    DEV_Module_Exit();
-    exit(0);
-}
-
-
-// Displays a message while the clock waits for the Pi to update its RTC.
-void displayStartupMsg(LitClock& lit_clock)
-{
-    std::unordered_map<std::string, std::string> startupMessage = 
-    {
-        {"time", "00:00"},
-        {"timestring", "Literary Quote Clock is Starting…"},
-        {"quote", "Literary Quote Clock is Starting…"},
-        {"title", ""},
-        {"author", ""},
-    };
-    std::vector<unsigned char> startupImage8bpp = lit_clock.writer.generateQuoteImage(startupMessage, false);
-    std::vector<unsigned char> startupImage4bpp = lit_clock.convertTo4bpp(startupImage8bpp);
-    UBYTE* startupMsgPtr = startupImage4bpp.data();
-    EPD_IT8951_4bp_Refresh(startupMsgPtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr, false);
-    spdlog::info("Displayed startup image");
-}
-
-
-// Displays the first quote after the Pi's RTC has updated.
-void displayFirstImage(LitClock& lit_clock)
-{
-    lit_clock.getTime(lit_clock.bufferedHour, lit_clock.bufferedMinute);
-    std::vector<unsigned char> firstImage8bpp = lit_clock.getImage(lit_clock.bufferedHour, lit_clock.bufferedMinute);
-    std::vector<unsigned char> firstImage4bpp = lit_clock.convertTo4bpp(firstImage8bpp);
-    UBYTE* firstQuotePtr = firstImage4bpp.data();
-    EPD_IT8951_4bp_Refresh(firstQuotePtr, 0, 0, lit_clock.Panel_Width, lit_clock.Panel_Height, false, lit_clock.Init_Target_Memory_Addr, false);
-    spdlog::info("Displayed first quote");
-}
-
-// Determines how long the clock's loop in main() should sleep before the next call to tick_forward().
-//
-// It takes ~3 seconds for tick_forward() to complete (most of this is for the screen to update with a
-// new image to display). So tick_forward() is called at the 57th second of every minute. It's possible
-// the function takes less than 3 seconds to return so we need to make sure that the loop sleeps until
-// the next 57th second.
-int sleepDuration(int currSecond)
-{
-    if (currSecond < 57)
-        return 57 - currSecond;
-    else
-        return 57 - currSecond + 60;
-}
-
-
-int main()
-{
-    //Exception handling:ctrl + c
-    signal(SIGINT, Handler);
-
-    LitClock lit_clock;
-    displayStartupMsg(lit_clock);
-
-    spdlog::info("Sleeping for 30 sec to let the RTC update");
-    std::this_thread::sleep_for(std::chrono::seconds(30));
-    
-    displayFirstImage(lit_clock);
-    
-    // initialize the buffer
-    for (int i = 0; i < MAX_IMAGES_TO_BUFFER; i++) {
-        lit_clock.refreshBuffer();
-    }
-    spdlog::info("Image buffer initialized");
-
-    // sleep until we're ready to start using the buffer
-    std::time_t t = std::time(nullptr);
-    std::tm* localTime = std::localtime(&t);
-    int currSecond = localTime->tm_sec;
-    std::this_thread::sleep_for(std::chrono::seconds(sleepDuration(currSecond))); // sleep until next min
-    
-    // This is bad practice, but it ensures that anything I might've missed is caught
-    // so that the screen can be cleared before the program exits.
-    try {
-        while(true)
-        {
-            lit_clock.tick_forward();
-            
-            // sleep until the 57th second of the current min (leave ~3 sec for processing time
-            // to change image on the screen)
-            std::time_t t = std::time(nullptr);
-            std::tm* localTime = std::localtime(&t);
-            int currSecond = localTime->tm_sec;
-            //spdlog::info("going to sleep for {} seconds", 57 - currSecond);
-            std::this_thread::sleep_for(std::chrono::seconds(sleepDuration(currSecond)));
-            spdlog::info("woke up to display next quote.");
-        }
-    } catch (...)
-    {
-        std::println("error");
-        Paint_Clear(0xFF); //TODO: fix to actually clear screen
-        exit(0);
-    }
 }

@@ -16,11 +16,16 @@ extern "C" {
 #include "image_buffer.hpp"
 #include "image_generator/writer.hpp"
 
-
-class LitClock
+// Determines which quote image should be displayed.
+//
+// This class contains all logic to ensure that the correct quote is
+// displayed at each minute and information about the EPD that is necessary for
+// Waveshare's libraries to display images. It is used in clock.cpp's main()
+// function to continuously update the screen once every minute with a new quote.
+class Horologium
 {
     public:
-        LitClock()
+        Horologium()
         {
             if(DEV_Module_Init()!=0) {
                 spdlog::critical("Error: Failed to initialize the BCM2835 hardware module.");
