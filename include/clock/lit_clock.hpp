@@ -44,7 +44,12 @@ class LitClock
             Paint_SetBitsPerPixel(BITS_PER_PIXEL);
             spdlog::info("Initial Waveshare screen config complete");
 
-            cacheQuotes();
+            int numCachedQuotes = cacheQuotes();
+            if ( numCachedQuotes == -1) {
+                std::println("Error: Failed to open quotes file.");
+            } else {
+                spdlog::info("Cached {0:d} quotes.", numCachedQuotes);
+            }
 
             try {
                 writer.initFont(projectPath("/share/fonts/Bookerly.ttf"), writer.fonts.regularBuf, writer.fonts.regular);
@@ -71,7 +76,9 @@ class LitClock
         UDOUBLE Init_Target_Memory_Addr; // The memory address on the IT8951 controller's onboard memory where pixel data should be written before a display refresh.
         
         // Parses the CSV of quotes and store them in a vector.
-        void cacheQuotes();
+        //
+        // Returns the number of cached quotes, or -1 on failure.
+        int cacheQuotes();
 
         // Advances the display by one minute: displays the image at the front of the buffer and refills the buffer.
         // 

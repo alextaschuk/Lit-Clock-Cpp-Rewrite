@@ -22,9 +22,7 @@
 int LitClock::cacheQuotes()
 {    
     std::ifstream quoteFile(projectPath(QUOTES_PATH));
-    if (!quoteFile.is_open()) {
-        return -1;
-    }
+    if (!quoteFile.is_open()) { return -1; }
 
     std::string line;
     std::getline(quoteFile, line); // skip the header row
