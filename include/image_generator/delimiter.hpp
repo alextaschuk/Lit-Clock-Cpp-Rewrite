@@ -8,7 +8,7 @@ enum class DelimiterType
     Italic,
     Bold,
     Time,
-    Newline,
+    EndOfLine,
     Count // only used to track number of delimiter types
 };
 
@@ -36,12 +36,12 @@ struct Delimiter // TODO: make a class?
 //  Note: A timestring should never be manually wrapped in the quote CSV file because it is
 //      automatically wrapped when a quote is drawn.
 struct CharacterDelimiters {
-    std::string ITALIC  = "_";  // U+005F (Low Line)
-    std::string BOLD    = "*";  // U+002A (Asterisk)
-    std::string TIMESTR = "|";  // U+007C (Vertical Line)
-    std::string NEWLINE = "\n";
+    std::string ITALIC  = "_";    // U+005F (Low Line)
+    std::string BOLD    = "*";    // U+002A (Asterisk)
+    std::string TIMESTR = "|";    // U+007C (Vertical Line)
+    std::string ENDOFLINE = "\n"; // U+000A (End of Line)
 
     std::vector<std::string> getCharDelims() const {
-        return {ITALIC, BOLD, TIMESTR, NEWLINE };
+        return {ITALIC, BOLD, TIMESTR, ENDOFLINE };
     }
 };

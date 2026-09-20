@@ -13,9 +13,6 @@
 #include "utils.hpp"
 
 
-static float SCALE_MULTIPLIER = 0.99f; // to constrain bboxes to make sure text fits
-
-
 // Stores the (x,y) coordinate pairs of the top left and bottom right corners of a bounding box.
 struct BoundingBox {
     int topLeftX = 0;
@@ -57,6 +54,8 @@ struct Pen {
     short int color = 128; // grayscale value (0-255) to draw text with.
     int x = 0; // X coordinate of the pen's position on the image.
     int y = 0; // Y coordinate of the pen's position on the image.
+    
+    // TODO: make static and move to formatChar
     bool pendingEscape = false; // insert a backslash before a delimiter to treat it as a normal character.
 };
 
@@ -107,37 +106,8 @@ class Writer {
     Delimiter{DelimiterType::Italic, CharacterDelimiters().ITALIC},
     Delimiter{DelimiterType::Bold, CharacterDelimiters().BOLD},
     Delimiter{DelimiterType::Time, CharacterDelimiters().TIMESTR},
-    Delimiter{DelimiterType::Time, CharacterDelimiters().NEWLINE},
+    Delimiter{DelimiterType::EndOfLine, CharacterDelimiters().ENDOFLINE},
     };
-
-
-    // Returns a character delimiter from `charDelimiters` by passing in its type.
-    Delimiter& getDelimiter(DelimiterType type) {
-        return charDelimiters[static_cast<size_t>(type)];
-    }
-
-
-    // Finds which delimiter a character represents.
-    Delimiter* findDelimiter(const std::string& character) {
-        for (auto& delim : charDelimiters) {
-            if (delim.character == character)
-                return &delim;
-        }
-        return nullptr;
-    }
-
-
-    // Moves the pen to some (x,y) coordinate.
-    void resetPen (int x_pos, int y_pos) {
-        pen.x = x_pos;
-        pen.y = y_pos;
-    }
-
-
-    // Sets all character delimiter counters to 0.
-    void resetCharDelimCount() {
-        for (Delimiter& d : charDelimiters) { d.count = 0; }
-    }
 
 
     // Writes text inside the bounding box of an image.
@@ -147,7 +117,7 @@ class Writer {
     void writeInBBox(std::vector<unsigned char>& image, std::unordered_map<std::string, std::string> row);
 
 
-    // Finds the indices where the timestring begins and ends in a quote.
+    // A helper to `writeInBBox()` that finds the indices where the timestring begins and ends in a quote.
     //
     // row: A row from the CSV file.
     // timestrBegin: output parameter. Index where the first time string delim is found in the text.
@@ -155,34 +125,24 @@ class Writer {
     //
     // Returns -1 if the timestring is not found, 0 on success.
     int findTimestrIndices(std::unordered_map<std::string, std::string> row, size_t& timestrBegin, size_t& timestrEnd) {
-        if (row["timestring"].empty()) {
+        if (row["timestring"].empty())
             return -1;
-        }
+
         timestrBegin = toLower(row["quote"]).find(toLower(row["timestring"]));
-        if (timestrBegin == std::string::npos) {
+        if (timestrBegin == std::string::npos) 
             return -1; // timestring not found
-        }
+
         timestrEnd = timestrBegin + row["timestring"].size();
         return 0;
     }
 
 
-    // Draws a word onto the image, one glyph at a time.
+    // Draws a word onto the image, one character at a time.
     //
     // image: Bitmap of the image to write on.
     // word: The word to be written.
     // isLast: `true` if the word is the last word of a line (to skip adding a space after the last word in a line)
     void drawWord(std::vector<unsigned char>& image, std::string word, bool isLast);
-
-
-    // Determines which font and color should be used to write a character. If the character is a delimiter, an empty string is returned.
-    //
-    // pen: A pen to track changes to the character's font and color.
-    // character: output parameter. The character whose formatting is to be checked.
-    // `pendingEscape` should be true (since it is only true for escaping delimiters).
-    //
-    // Returns an empty string if `character` is a `CharacterDelimiter` or a `WordDelimiter`. Otherwise `character` is returned. 
-    std::string formatChar(Pen& pen, std::string character);
 
 
     // Finds the maximum possible font scale (in font units) that can be used for a given bounding box and determiens how the text
@@ -195,8 +155,8 @@ class Writer {
     void findOptimalFontScale(std::string& wrappedLines);
 
 
-    // Wraps text using a given font scale such that the text doesn't overflow past
-    // the rightmost x coordinate of the bbox. It is a helper to `findOptimalFontScale()`
+    // A helper to `findOptimalFontScale()` that Wraps text using a given font scale such that the text doesn't overflow past
+    // the rightmost x coordinate of the bbox.
     //
     // pen: A temporary pen that is created and destroyed in `findOptimalFontScale()`.
     // 
@@ -204,15 +164,65 @@ class Writer {
     std::string wrapText(Pen& pen);
 
 
-    // Checks if a word needs to be moved onto a new line, either due to text wrapping
-    // or custom formatting. It is a helper to `wrapText()`.
+    // Determines which font and color should be used to write a character. If the character is a delimiter, an empty string is
+    // returned.
+    //
+    // pen: A pen to track changes to the character's font and color.
+    // character: output parameter. The character whose formatting is to be checked.
+    // `pendingEscape` should be true (since it is only true for escaping delimiters).
+    //
+    // Returns an empty string if `character` is a `CharacterDelimiter` or the escape character ("\\"). Otherwise `character` is returned. 
+    std::string formatChar(Pen& pen, std::string character);
+
+
+    // A helper to `wrapText()` that checks if a word needs to be moved onto a new line, either due to text wrapping
+    // (it doesn't fit on the current line) or custom formatting (contains one or more "\n").
     //
     // pen: A temporary pen that is created and destroyed in `findOptimalFontScale()`.
     // word: The word to be formatted.
     // lines: The text to be written onto an image.
     // wordLength: The length of the word in pixels.
-    //void formatWord(Pen& pen, std::string word, std::vector<std::string>& lines, const int& wordLength);
     void formatWord(Pen& pen, std::string word, std::string& lines, const int& wordLength);
+
+
+    // Retrieves a Delimiter from `charDelimiters` using the passed in type.
+    Delimiter& getDelimiter(DelimiterType type) {
+        return charDelimiters[static_cast<size_t>(type)];
+    }
+
+
+    // Finds which delimiter a character represents. If the character is not a delimiter,
+    // a nullptr is returned.
+    Delimiter* findDelimiter(const std::string& character) {
+        for (auto& delim : charDelimiters) {
+            if (delim.character == character) return &delim;
+        }
+        return nullptr;
+    }
+
+
+    // Sets the count values in all delimiters to 0.
+    void resetDelimCount() {
+        for (Delimiter& d : charDelimiters) { d.count = 0; }
+    }
+
+
+    // Moves the pen to some (x,y) coordinate.
+    void resetPen (int x_pos, int y_pos) {
+        pen.x = x_pos;
+        pen.y = y_pos;
+    }
+
+
+    // Calculates a glyph's advance width.
+    //
+    // codepoint: A decoded Unicode codepoint in base 10.
+    // font: The font that a pen uses (pen.font) to draw glyphs.
+    // fontScale: A pen's font scale (pen.fontScale) to convert from font units to pixel units
+    //
+    // Returns the product of the advance width retrieved from stbtt_GetCodepointHMetrics
+    // and a pen's font scale.
+    float getAdvanceWidth( const int& codepoint, const stbtt_fontinfo& font, const float& fontScale);
     
 
     // Finds the vertical extent of the tallest glyph's ascender in a line of text, measured as pixels above the baseline.

@@ -20,11 +20,21 @@
 #include "image_generator/delimiter.hpp"
 
 
+float Writer::getAdvanceWidth(const int& codepoint, const stbtt_fontinfo& font, const float& fontScale)
+{
+    int advanceWidth = 0;
+    stbtt_GetCodepointHMetrics(&font, codepoint, &advanceWidth, 0); 
+    return advanceWidth * fontScale;
+}
+
+
 int Writer::maxAscender(const std::string& line)
 {
     int maxHeight = 0;
-    for (const std::string& word : split(line, ' ')) {
-        for (size_t i = 0; i < word.size(); ) {
+    for (const std::string& word : split(line, ' '))
+    {
+        for (size_t i = 0; i < word.size(); )
+        {
             int numBytes;
             int codepoint = decodeUTF8(word, i, numBytes);
             i += numBytes;
@@ -34,6 +44,7 @@ int Writer::maxAscender(const std::string& line)
             maxHeight = std::min(maxHeight, glyphBox.topLeftY);
         }
     }
+
     return maxHeight;
 }
 
@@ -44,7 +55,6 @@ float Writer::getLineWidth(Pen& pen, const std::string& line)
         return 0.0f;
 
     float lineWidth = 0.0f;
-    int advanceWidth = 0;
     for (size_t i = 0; i < line.size(); )
     {
         int numBytes;
@@ -58,8 +68,7 @@ float Writer::getLineWidth(Pen& pen, const std::string& line)
         if (character.empty())
             continue;
 
-        stbtt_GetCodepointHMetrics(&pen.font, codepoint, &advanceWidth, 0); 
-        lineWidth += advanceWidth * pen.fontScale;
+        lineWidth += getAdvanceWidth(codepoint, pen.font, pen.fontScale);
     }
     return lineWidth;
 }
@@ -83,19 +92,19 @@ void Writer::resizeCreditBbox(const std::string& wrappedLines)
 
 std::string Writer::formatChar(Pen& pen, std::string character)
 {
-    if (pen.pendingEscape) {
+    if (pen.pendingEscape)
         pen.pendingEscape = false;
-    } else {
-        if (character == CharacterDelimiters().NEWLINE)
-            return ""; // dealt with in formatWord()
-        
-        if (character == "\\") {
-            pen.pendingEscape = true;
-            character = "";
-        } else if (auto* delim = findDelimiter(character)) {
-            ++delim->count;
-            character = "";
-        }
+    else if (character == CharacterDelimiters().ENDOFLINE)
+        return ""; // \n dealt with in Writer::formatWord()
+    else if (character == "\\")
+    {
+        pen.pendingEscape = true;
+        character = "";
+    }
+    else if (auto* delim = findDelimiter(character))
+    {
+        ++delim->count;
+        character = "";
     }
 
     const bool italicActive = getDelimiter(DelimiterType::Italic).count % 2 == 1;
@@ -122,24 +131,26 @@ std::string Writer::formatChar(Pen& pen, std::string character)
 
 void Writer::formatWord(Pen& pen, std::string word, std::string& lines, const int& wordLength)
 {
-    const auto newline = CharacterDelimiters().NEWLINE;
-    bool on_newline = false;
     size_t pos = 0;
+    size_t newlineCount = 0;
+    static const std::string& eolDelim = CharacterDelimiters().ENDOFLINE;
+
+    // replace literal "\" and "n" strings from the CSV with a proper EOL character (U+000A).
     while ((pos = word.find("\\n", pos)) != std::string::npos)
-    { // replace literal "\" and "n" strings from the CSV with a proper EOL character (U+000A).
-        word.replace(pos, 2, CharacterDelimiters().NEWLINE);
+    {
+        word.replace(pos, 2, eolDelim);
         ++pos;
     }
-
-    size_t newlineCount = 0;
+    
     pos = 0;
-    while ((pos = word.find(newline, pos)) != std::string::npos) {
-        pos += CharacterDelimiters().NEWLINE.size();
+    while ((pos = word.find(eolDelim, pos)) != std::string::npos)
+    {
+        pos += eolDelim.size();
         ++newlineCount;
-        on_newline = true;
     }
  
-    if (newlineCount > 0) {
+    if (newlineCount > 0)
+    {
         pen.x = bbox.topLeftX;
         for (size_t i = 0; i < newlineCount; ++i) 
             pen.y += getLineHeight(pen.font, pen.fontScale);
@@ -148,17 +159,14 @@ void Writer::formatWord(Pen& pen, std::string word, std::string& lines, const in
     if (pen.x + wordLength > bbox.bottomRightX) {
         pen.x = bbox.topLeftX;
         pen.y += getLineHeight(pen.font, pen.fontScale);
-        lines += CharacterDelimiters().NEWLINE + word;
-    } else {
+        lines += eolDelim + word;
+    } else
         lines += (!lines.empty()) ? " " + word : word;
-    }
 }
 
 
 std::string Writer::wrapText(Pen& pen)
 {
-    pen.x = bbox.topLeftX;
-    pen.y = bbox.topLeftY;
     std::string wrapped_lines = "";
     std::vector<std::string> words = split(text, ' ');
 
@@ -166,26 +174,24 @@ std::string Writer::wrapText(Pen& pen)
     {
         const std::string& currWord= words[i];
         int currWordLength = static_cast<int>(getLineWidth(pen, currWord));
+
+        // A single word cannot be longer than the bbox's width.
         if (currWordLength >= bbox.bottomRightX - bbox.topLeftX)
-        { // A single word cannot be longer than the bbox's width.
+        {
             pen.x = bbox.topLeftX;
             pen.y = bbox.topLeftY;
             return "";
         }
 
-        if (i != words.size() - 1) 
-        { /* add the length of a space after each word (except for the last) */
-            int advanceWidth;
-            stbtt_GetCodepointHMetrics(&pen.font, ' ', &advanceWidth, 0); 
-            currWordLength += advanceWidth * pen.fontScale;
-        }
-        
+        if (i != words.size() - 1) // Add the length of a space after each word (except for the last)
+            currWordLength += getAdvanceWidth(' ', pen.font, pen.fontScale);
+
         formatWord(pen, currWord, wrapped_lines, currWordLength);
         pen.x += currWordLength;
 
         int lineHeight = getLineHeight(pen.font, pen.fontScale);
         if (pen.y + lineHeight > bbox.bottomRightY)
-        { /* current wrapping writes past text's bbox. Need to reduce font size. */
+        { // Current wrapping writes past text's bbox. Need to reduce font size.
             pen.x = bbox.topLeftX;
             pen.y = bbox.topLeftY;
             return "";
@@ -198,27 +204,26 @@ std::string Writer::wrapText(Pen& pen)
 
 void Writer::findOptimalFontScale(std::string& wrappedLines)
 {
-    float min = MIN_FONT_SCALE;
-    float max = MAX_FONT_SCALE;
+    float min = MIN_FONT_SCALE, max = MAX_FONT_SCALE;
     float optimalScale = 0.0f;
     Pen tempPen = this->pen;
     tempPen.font = fonts.regular;
-    BoundingBox tempBbox = this->bbox;
 
-    /* Binary search to find best font size. */
+    // Binary search to find the most optimal font scale.
     while (min <= max)
     {
+        tempPen.x = bbox.topLeftX;
+        tempPen.y = bbox.topLeftY;
         float mid = std::floor(min + (max - min) / 2);
         tempPen.fontScale = stbtt_ScaleForPixelHeight(&fonts.regular, mid);
-        std::string lines = wrapText(tempPen);
-        if (!lines.empty()) { /* Text fits. Try a larger font scale */
+        
+        std::string wrappedText = wrapText(tempPen);
+        if (!wrappedText.empty()) { // Text fits, try a larger font scale
             optimalScale = mid;
             min = mid + 1;
-            wrappedLines = lines;
-        } else {
+            wrappedLines = wrappedText;
+        } else
             max = mid - 1; // Text didn't fit
-        }
-        resetCharDelimCount();
     }
 
     if (optimalScale > 0) {
@@ -242,22 +247,18 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word, bool 
         i += numBytes; 
         if (currCharacter.empty())
             continue;
-        /**
-        * We get a bbox around a glyph's rendered ink, relative to the its origin (which is the pen's x and y coord).
-        * pen.x/pen.y track where the cursor is on the image. Specifically, pen.y tracks where the glyph's baseline is on the image.
-        * Example for glyph 'A':
-        *  glyphBox.topLeftX  = 1      // ink starts 1px right of the origin
-        *  glyphBox.topLeftY  = -18    // ink starts 18px above the baseline
-        *  glyphBox.bottomRightX = 15
-        *  glyphBox.bottomRightY = 0   // ink ends right at the baseline (for something like 'j' this would be negative.)
-        */
+        
+        // We get a bbox around a glyph's rendered ink, relative to the its origin (which is the pen's x and y coord).
+        // pen.x/pen.y track where the cursor is on the image. Specifically, pen.y tracks where the glyph's baseline is on the image.
+        // Example for glyph 'A':
+        //  glyphBox.topLeftX  = 1      // ink starts 1px right of the origin
+        //  glyphBox.topLeftY  = -18    // ink starts 18px above the baseline
+        //  glyphBox.bottomRightX = 15
+        //  glyphBox.bottomRightY = 0   // ink ends right at the baseline (for something like 'j' this would be negative.)
         BoundingBox glyphBox;
         stbtt_GetCodepointBitmapBox(&pen.font, codepoint, pen.fontScale, pen.fontScale, &glyphBox.topLeftX, &glyphBox.topLeftY, &glyphBox.bottomRightX, &glyphBox.bottomRightY); // rasterize glyph c
-        int glyphWidth = glyphBox.bottomRightX - glyphBox.topLeftX;
-        int glyphHeight = glyphBox.bottomRightY - glyphBox.topLeftY;
 
-        // (drawX, drawY) is the coordinate on the image where the top-left of the glyph's bbox should be placed.
-        int drawX = pen.x + glyphBox.topLeftX;
+        int drawX = pen.x + glyphBox.topLeftX; // (drawX, drawY) is the coordinate on the image where the top-left of the glyph's bbox should be placed.
         int drawY = pen.y + glyphBox.topLeftY;
 
         // Handle the case when a glyph's ink starts outside the left of or above the image's bounding box.
@@ -277,6 +278,8 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word, bool 
         }
 
         // Make a temporary buffer for the rasterized glyph, then copy it onto the image (aka blitting).
+        int glyphWidth = glyphBox.bottomRightX - glyphBox.topLeftX;
+        int glyphHeight = glyphBox.bottomRightY - glyphBox.topLeftY;
         std::vector<unsigned char> glyphBuf(glyphWidth * glyphHeight, 0);
         stbtt_MakeCodepointBitmap(&pen.font, glyphBuf.data(), glyphWidth, glyphHeight, glyphWidth, pen.fontScale, pen.fontScale, codepoint);
             
@@ -288,24 +291,18 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word, bool 
                 int destY = drawY + row; // The rasterized glyph's y coordinate of the current pixel
 
                 // make sure the pixel fits
-                if (destX >= bbox.topLeftX &&
-                    destX < bbox.bottomRightX &&
-                    destY >= bbox.topLeftY &&
-                    destY < bbox.bottomRightY
-                    )
+                if (destX >= bbox.topLeftX && destX < bbox.bottomRightX && destY >= bbox.topLeftY && destY < bbox.bottomRightY)
                 {
                     unsigned char glyphPixel = glyphBuf[row * glyphWidth + col]; // foreground pixel
                     if (glyphPixel > 0) // only want non-background pixels
                     {
-                        /**
-                        * use linear interpolation between two colors, weighted by an alpha value to determine the pixel's color.
-                        * Alpha compositing is generally: result = foreground * alpha + background * (1 - alpha)
-                        * alpha is usually normalized to [0, 1] but we are using 8-bit space here (TODO: reduce to 4-bit?)
-                        * so we use a range of [0, 255] instead. 
-                        * glyphPixel (0-255) plays the role of alpha * 255.
-                        * (255 - glyphPixel) plays the role of (1 - alpha * 255)
-                        * dividing the sum by 255 at the end normalizes it to [0, 255].
-                        */
+                        // use linear interpolation between two colors, weighted by an alpha value to determine the pixel's color.
+                        // Alpha compositing is generally: result = foreground * alpha + background * (1 - alpha)
+                        // alpha is usually normalized to [0, 1] but we are using 8-bit space here (reduced to 4-bit when the image is
+                        // displayed to an EPD), so we use a range of [0, 255] instead. 
+                        // glyphPixel (0-255) plays the role of alpha * 255.
+                        // (255 - glyphPixel) plays the role of (1 - alpha * 255)
+                        // dividing the sum by 255 at the end normalizes it to [0, 255].
                         int pixelIdx = destY * SCREEN_WIDTH + destX; // this converts the 2D coords of the pixel into a 1D array index
                         int backgroundPixel = image[pixelIdx];
                         image[pixelIdx] = (pen.color * glyphPixel + backgroundPixel * (255 - glyphPixel)) / 255;
@@ -313,21 +310,15 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word, bool 
                 }
             }
         }
-            
-        int advanceWidth; // how far the pen should move after drawing a glyph (in font units)
-        stbtt_GetCodepointHMetrics(&pen.font, codepoint, &advanceWidth, 0);
-        pen.x += advanceWidth * pen.fontScale; // move the pen to the right for the next glyph.
+
+        pen.x += getAdvanceWidth(codepoint, pen.font, pen.fontScale);
     }
         
-    if (!isLast)
-    { /* add the length of a space after each word (except for the last) */
-        int advanceWidth;
-        stbtt_GetCodepointHMetrics(&pen.font, ' ', &advanceWidth, 0);
-        pen.x += advanceWidth * pen.fontScale;
-    }
+    if (!isLast) // Add the length of a space after each word (except for the last)
+        pen.x += getAdvanceWidth(' ', pen.font, pen.fontScale);
 
     for (Delimiter &delim : charDelimiters)
-    { /* reset delimiters whose wrapping is complete*/
+    { // Reset delimiters whose wrapping is complete.
         if (delim.count == 2) {
             delim.count = 0;
             pen.font = fonts.regular;
@@ -362,7 +353,7 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
     findOptimalFontScale(wrappedLines);
     if (textType == CREDITS) { resizeCreditBbox(wrappedLines); } // Resize the credit bbox to optimize the quote bbox's size.
     resetPen(bbox.topLeftX, bbox.topLeftY); // move the pen to its starting position.
-    resetCharDelimCount();
+    resetDelimCount();
 
     for (const std::string& line : split(wrappedLines, '\n'))
     {
@@ -379,17 +370,17 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
         pen.y += getLineHeight(pen.font, pen.fontScale) + lineHeight; // move to the next line and continue drawing
     }
     resetPen(bbox.topLeftX, bbox.topLeftY);
-    resetCharDelimCount();
+    resetDelimCount();
 }
 
 
 std::vector<unsigned char> Writer::generateQuoteImage(std::unordered_map<std::string, std::string> row, const bool& includeCredits)
 {
     std::vector<unsigned char> image(SCREEN_WIDTH * SCREEN_HEIGHT, BG_COLOR);
-
     pen.font = fonts.regular;
 
-    /* leave some room around the screen so that text isn't written right up to its edges. */
+    // Leave some room around the screen so that text isn't written right up to its edges.
+    const float SCALE_MULTIPLIER = 0.99f; // to constrain bboxes to make sure text fits
     BoundingBox quoteBBox;
     quoteBBox.topLeftX      =  static_cast<int>(std::floor(SCREEN_WIDTH - SCREEN_WIDTH * SCALE_MULTIPLIER));
     quoteBBox.topLeftY      = static_cast<int>(std::floor(SCREEN_HEIGHT - SCREEN_HEIGHT * SCALE_MULTIPLIER));
@@ -400,7 +391,7 @@ std::vector<unsigned char> Writer::generateQuoteImage(std::unordered_map<std::st
     {
         textType            = CREDITS;
         pen.color           = CREDIT_COLOR;
-        text                = "_" + row["title"] + "_, " + "\n" + row["author"]; // italicize book title, put author on new line
+        text                = "_" + row["title"] + "_, " + "\n" + row["author"]; // e.g. "_Dune_, \nFrank Herbert"
         bbox.topLeftX       = static_cast<int>(std::floor(SCREEN_WIDTH * 0.45)); // scale credit's bbox down to bottom right of screen
         bbox.topLeftY       = static_cast<int>(std::floor(SCREEN_HEIGHT * 0.85));
         bbox.bottomRightX   = static_cast<int>(std::floor(SCREEN_WIDTH * SCALE_MULTIPLIER));
@@ -417,7 +408,7 @@ std::vector<unsigned char> Writer::generateQuoteImage(std::unordered_map<std::st
 
     writeInBBox(image, row);
     resetPen(bbox.topLeftX, bbox.topLeftY);
-    resetCharDelimCount();
+    resetDelimCount();
 
     return image;
 }
