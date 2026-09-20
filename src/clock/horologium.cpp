@@ -42,7 +42,7 @@ int Horologium::cacheQuotes()
     while (std::getline(quoteFile, line))
     {
         quoteCount++;
-        std::vector<std::string> splitRow = split(line, "|");
+        std::vector<std::string> splitRow = split(line, '|');
         if (splitRow.size() != 5){
             std::println("Error: Row {} is missing a column.", quoteCount);
             continue;
