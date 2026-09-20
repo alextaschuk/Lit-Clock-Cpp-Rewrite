@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <print>
+#include <ranges>
+#include <string>
+#include <vector>
 
 std::string projectPath(const std::string& relativePath) {
     return std::string(PROJECT_ROOT) + "/" + relativePath;
@@ -14,19 +17,14 @@ std::string toLower(const std::string& text) {
     return loweredText;
 }
 
-std::vector<std::string> split(std::string s, const std::string& delimiter)
+auto split(const std::string& str, char delimiter) -> std::vector<std::string>
 {
-    std::vector<std::string> tokens;
-    size_t pos = 0;
-    std::string token;
-    while ((pos = s.find(delimiter)) != std::string::npos) {
-        token = s.substr(0, pos);
-        tokens.push_back(token);
-        s.erase(0, pos + delimiter.length());
-    }
-    tokens.push_back(s);
-
-    return tokens;
+    return str
+        | std::ranges::views::split(delimiter)
+        | std::ranges::views::transform([](auto&& part) {
+            return std::string(std::ranges::begin(part), std::ranges::end(part));
+        })
+        | std::ranges::to<std::vector<std::string>>();
 }
 
 /**

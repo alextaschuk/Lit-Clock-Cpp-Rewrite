@@ -106,7 +106,8 @@ class Writer {
     std::array<Delimiter, static_cast<int>(DelimiterType::Count)> charDelimiters = { 
     Delimiter{DelimiterType::Italic, CharacterDelimiters().ITALIC},
     Delimiter{DelimiterType::Bold, CharacterDelimiters().BOLD},
-    Delimiter{DelimiterType::Time, CharacterDelimiters().TIMESTR}
+    Delimiter{DelimiterType::Time, CharacterDelimiters().TIMESTR},
+    Delimiter{DelimiterType::Time, CharacterDelimiters().NEWLINE},
     };
 
 
@@ -177,7 +178,8 @@ class Writer {
     // Determines which font and color should be used to write a character. If the character is a delimiter, an empty string is returned.
     //
     // pen: A pen to track changes to the character's font and color.
-    // character: The character whose formatting is to be checked.
+    // character: output parameter. The character whose formatting is to be checked.
+    // `pendingEscape` should be true (since it is only true for escaping delimiters).
     //
     // Returns an empty string if `character` is a `CharacterDelimiter` or a `WordDelimiter`. Otherwise `character` is returned. 
     std::string formatChar(Pen& pen, std::string character);
@@ -209,7 +211,8 @@ class Writer {
     // word: The word to be formatted.
     // lines: The text to be written onto an image.
     // wordLength: The length of the word in pixels.
-    void formatWord(Pen& pen, std::string word, std::vector<std::string>& lines, const int& wordLength);
+    //void formatWord(Pen& pen, std::string word, std::vector<std::string>& lines, const int& wordLength);
+    void formatWord(Pen& pen, std::string word, std::string& lines, const int& wordLength);
     
 
     // Finds the vertical extent of the tallest glyph's ascender in a line of text, measured as pixels above the baseline.
@@ -239,6 +242,12 @@ class Writer {
         stbtt_GetFontVMetrics(&font, &ascent, &descent, &lineGap);
         return static_cast<int>((ascent - descent + lineGap) * fontScale);
     }
+
+    // Calculates a line of text's width.
+    //
+    // pen: 
+    // line: A single line of text, one or more words long.
+    float getLineWidth(Pen& pen, const std::string& line);
 
 
     // Shrinks the credits bbox to fit tightly around its text, allowing the quote bbox to be enlarged and fill the blank space.

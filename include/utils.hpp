@@ -18,7 +18,7 @@ std::string toLower(const std::string& text);
 // delimiter: A substring of `s` to split the string with.
 //
 // Returns a vector of the split string.
-std::vector<std::string> split(std::string s, const std::string& delimiter);
+auto split(const std::string& str, char delimiter) -> std::vector<std::string>;
 
 
 // Decodes a single Unicode codepoint from a UTF-8 encoded string, starting at the given byte offset.

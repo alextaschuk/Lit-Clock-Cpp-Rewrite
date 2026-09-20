@@ -8,6 +8,7 @@ enum class DelimiterType
     Italic,
     Bold,
     Time,
+    Newline,
     Count // only used to track number of delimiter types
 };
 
@@ -38,24 +39,9 @@ struct CharacterDelimiters {
     std::string ITALIC  = "_";  // U+005F (Low Line)
     std::string BOLD    = "*";  // U+002A (Asterisk)
     std::string TIMESTR = "|";  // U+007C (Vertical Line)
+    std::string NEWLINE = "\n";
 
     std::vector<std::string> getCharDelims() const {
-        return {ITALIC, BOLD, TIMESTR };
-    }
-};
-
-// Stores delimiting characters to format one or more words.
-// 
-// NEWLINE: Insert a newline between the current and succeeding text. (Equivalent to pressing the
-//          enter/return key).
-// DOUBLE_NEWLINE: Insert two newlines between the current and succeeding text. (Equivalent to pressing
-//          the enter/return twice).
-// TODO: Just use \n for both
-struct WordDelimiters {
-    std::string NEWLINE         = "␤";  // U+2424 (Symbol For Newline)
-    std::string DOUBLE_NEWLINE  = "⇇";  // U+21C7 (Leftwards Paired Arrows
-
-    std::vector<std::string> getWordDelims() const {
-        return { NEWLINE, DOUBLE_NEWLINE };
+        return {ITALIC, BOLD, TIMESTR, NEWLINE };
     }
 };

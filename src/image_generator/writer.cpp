@@ -23,7 +23,7 @@
 int Writer::maxAscender(const std::string& line)
 {
     int maxHeight = 0;
-    for (const std::string& word : split(line, " ")) {
+    for (const std::string& word : split(line, ' ')) {
         for (size_t i = 0; i < word.size(); ) {
             int numBytes;
             int codepoint = decodeUTF8(word, i, numBytes);
@@ -37,34 +37,45 @@ int Writer::maxAscender(const std::string& line)
     return maxHeight;
 }
 
+
+float Writer::getLineWidth(Pen& pen, const std::string& line)
+{
+    if (line.size() == 0)
+        return 0.0f;
+
+    float lineWidth = 0.0f;
+    int advanceWidth = 0;
+    for (size_t i = 0; i < line.size(); )
+    {
+        int numBytes;
+        int codepoint = decodeUTF8(line, i, numBytes);
+        std::string currChar = line.substr(i, numBytes);
+        std::string character = ""; // TODO: change currChar to output param in formatChar
+
+        character = formatChar(pen, currChar);
+        i += numBytes;
+
+        if (character.empty())
+            continue;
+
+        stbtt_GetCodepointHMetrics(&pen.font, codepoint, &advanceWidth, 0); 
+        lineWidth += advanceWidth * pen.fontScale;
+    }
+    return lineWidth;
+}
+
+
 void Writer::resizeCreditBbox(const std::string& wrappedLines)
 {
     float longestLineWidthF = 0.0f;
     int linesHeight = 0, longestLineWidth = 0;
-    for (const std::string& line : split(wrappedLines, "\n"))
+    for (const std::string& line : split(wrappedLines, '\n'))
     {
-        float currentLineWidth = 0;
         linesHeight += getLineHeight(pen.font, pen.fontScale);
-
-        for (size_t i = 0; i < line.size(); )
-        {
-            int numBytes;
-            int codepoint = decodeUTF8(line, i, numBytes);
-
-            std::string currCharacter = formatChar(pen, line.substr(i, numBytes));
-            i += numBytes;
-            if (currCharacter.empty()) {
-                continue;
-            }
-
-            int advanceWidth;
-            stbtt_GetCodepointHMetrics(&pen.font, codepoint, &advanceWidth, 0); 
-            currentLineWidth += advanceWidth * pen.fontScale;
-        }
-        longestLineWidthF = std::max(longestLineWidthF, currentLineWidth);
+        longestLineWidthF = std::max(longestLineWidthF, getLineWidth(pen, line));
     }
+    
     longestLineWidth = static_cast<int>(longestLineWidthF);
-
     bbox.topLeftX = bbox.bottomRightX - longestLineWidth;
     bbox.topLeftY = bbox.bottomRightY - linesHeight;
 }
@@ -72,19 +83,12 @@ void Writer::resizeCreditBbox(const std::string& wrappedLines)
 
 std::string Writer::formatChar(Pen& pen, std::string character)
 {
-    if (pen.pendingEscape) 
-    {
+    if (pen.pendingEscape) {
         pen.pendingEscape = false;
-    }
-    else
-    {
-        // skip if character is a WordDelimiter.
-        std::vector<std::string> wordDelims = WordDelimiters().getWordDelims();
-        const bool charIsWordDelim = std::find(wordDelims.begin(), wordDelims.end(), character) != wordDelims.end();
-        if (charIsWordDelim) {
-            return "";
-        }
-
+    } else {
+        if (character == CharacterDelimiters().NEWLINE)
+            return ""; // dealt with in formatWord()
+        
         if (character == "\\") {
             pen.pendingEscape = true;
             character = "";
@@ -116,25 +120,37 @@ std::string Writer::formatChar(Pen& pen, std::string character)
 }
 
 
-void Writer::formatWord(Pen& pen, std::string word, std::vector<std::string>& lines, const int& wordLength)
-{ 
-    // TODO: fix logic so that these checks word independent of each other
-    // (e.g., putting newline and doublenewline delim in same word don't work)
-    bool addLine = word.contains(WordDelimiters().NEWLINE) || word.contains(WordDelimiters().DOUBLE_NEWLINE);
-    if (word.contains(WordDelimiters().DOUBLE_NEWLINE)) {
-        pen.y += getLineHeight(pen.font, pen.fontScale);
-        lines.push_back("");
+void Writer::formatWord(Pen& pen, std::string word, std::string& lines, const int& wordLength)
+{
+    const auto newline = CharacterDelimiters().NEWLINE;
+    bool on_newline = false;
+    size_t pos = 0;
+    while ((pos = word.find("\\n", pos)) != std::string::npos)
+    { // replace literal "\" and "n" strings from the CSV with a proper EOL character (U+000A).
+        word.replace(pos, 2, CharacterDelimiters().NEWLINE);
+        ++pos;
     }
 
-    if (addLine || pen.x + wordLength > bbox.bottomRightX) {
+    size_t newlineCount = 0;
+    pos = 0;
+    while ((pos = word.find(newline, pos)) != std::string::npos) {
+        pos += CharacterDelimiters().NEWLINE.size();
+        ++newlineCount;
+        on_newline = true;
+    }
+ 
+    if (newlineCount > 0) {
+        pen.x = bbox.topLeftX;
+        for (size_t i = 0; i < newlineCount; ++i) 
+            pen.y += getLineHeight(pen.font, pen.fontScale);
+    }
+    
+    if (pen.x + wordLength > bbox.bottomRightX) {
         pen.x = bbox.topLeftX;
         pen.y += getLineHeight(pen.font, pen.fontScale);
-        lines.push_back(word);
+        lines += CharacterDelimiters().NEWLINE + word;
     } else {
-        if (lines.empty())
-            lines.push_back(word);
-        else
-            lines.back() += " " + word;
+        lines += (!lines.empty()) ? " " + word : word;
     }
 }
 
@@ -143,34 +159,15 @@ std::string Writer::wrapText(Pen& pen)
 {
     pen.x = bbox.topLeftX;
     pen.y = bbox.topLeftY;
+    std::string wrapped_lines = "";
+    std::vector<std::string> words = split(text, ' ');
 
-    std::vector<std::string> words = split(text, " ");
-    std::vector<std::string> lines; // stores wrapped lines (e.g. ["this  is a line", "this is another"])
-    for (size_t i = 0; i < words.size(); ++i) // 0.102427922
+    for (size_t i = 0; i < words.size(); ++i)
     {
-        const std::string& word = words[i];
-        float wordLengthF = 0.0f;
-
-        for (size_t j = 0; j < word.size(); )
-        {
-            int numBytes;
-            int codepoint = decodeUTF8(word, j, numBytes);
-
-            std::string currCharacter = formatChar(pen, word.substr(j, numBytes));
-            if (currCharacter.empty()) {
-                j += numBytes;
-                continue; // skip metrics if the character is a delimiter
-            }
-
-            int advanceWidth;
-            stbtt_GetCodepointHMetrics(&pen.font, codepoint, &advanceWidth, 0);    
-            wordLengthF += (advanceWidth * pen.fontScale);
-            j += numBytes;
-        }
-
-        int wordLength = static_cast<int>(wordLengthF);
-        if (wordLength >= bbox.bottomRightX - bbox.topLeftX)
-        { /* A single word cannot be longer than the bbox's width. */
+        const std::string& currWord= words[i];
+        int currWordLength = static_cast<int>(getLineWidth(pen, currWord));
+        if (currWordLength >= bbox.bottomRightX - bbox.topLeftX)
+        { // A single word cannot be longer than the bbox's width.
             pen.x = bbox.topLeftX;
             pen.y = bbox.topLeftY;
             return "";
@@ -180,11 +177,11 @@ std::string Writer::wrapText(Pen& pen)
         { /* add the length of a space after each word (except for the last) */
             int advanceWidth;
             stbtt_GetCodepointHMetrics(&pen.font, ' ', &advanceWidth, 0); 
-            wordLength += advanceWidth * pen.fontScale;
+            currWordLength += advanceWidth * pen.fontScale;
         }
         
-        formatWord(pen, word, lines, wordLength);
-        pen.x += wordLength;
+        formatWord(pen, currWord, wrapped_lines, currWordLength);
+        pen.x += currWordLength;
 
         int lineHeight = getLineHeight(pen.font, pen.fontScale);
         if (pen.y + lineHeight > bbox.bottomRightY)
@@ -195,13 +192,9 @@ std::string Writer::wrapText(Pen& pen)
         }
     }
 
-    std::string wrapped;
-    for (const auto& line : lines) {
-        wrapped += line + "\n"; // e.g. ["It is", "12:00 P.M."] -> "It is\n12:00 P.M.\n"
-    }
-    wrapped.pop_back(); // remove the extra '\n' at the end of the string
-    return wrapped;
+    return wrapped_lines;
 }
+
 
 void Writer::findOptimalFontScale(std::string& wrappedLines)
 {
@@ -217,8 +210,7 @@ void Writer::findOptimalFontScale(std::string& wrappedLines)
     {
         float mid = std::floor(min + (max - min) / 2);
         tempPen.fontScale = stbtt_ScaleForPixelHeight(&fonts.regular, mid);
-        std::string lines;
-        lines = wrapText(tempPen);
+        std::string lines = wrapText(tempPen);
         if (!lines.empty()) { /* Text fits. Try a larger font scale */
             optimalScale = mid;
             min = mid + 1;
@@ -244,12 +236,12 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word, bool 
     {
         int numBytes;
         int codepoint = decodeUTF8(word, i, numBytes);
+        std::string currChar = word.substr(i, numBytes);
+        std::string currCharacter = formatChar(pen, currChar);
 
-        std::string currCharacter = formatChar(pen, word.substr(i, numBytes));
-        if (currCharacter.empty()) {
-            i += numBytes; 
-            continue;   
-        }
+        i += numBytes; 
+        if (currCharacter.empty())
+            continue;
         /**
         * We get a bbox around a glyph's rendered ink, relative to the its origin (which is the pen's x and y coord).
         * pen.x/pen.y track where the cursor is on the image. Specifically, pen.y tracks where the glyph's baseline is on the image.
@@ -325,7 +317,6 @@ void Writer::drawWord(std::vector<unsigned char>& image, std::string word, bool 
         int advanceWidth; // how far the pen should move after drawing a glyph (in font units)
         stbtt_GetCodepointHMetrics(&pen.font, codepoint, &advanceWidth, 0);
         pen.x += advanceWidth * pen.fontScale; // move the pen to the right for the next glyph.
-        i += numBytes;
     }
         
     if (!isLast)
@@ -354,9 +345,9 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
         size_t timestrBegin = 0, timestrEnd = 0;
         if (findTimestrIndices(row, timestrBegin, timestrEnd) < 0)
         {
-            std::string msg = std::format("time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
+            std::string msg = std::format("Time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
             std::println("Error: {}", msg);
-            text = std::format("*Error* {}", msg);
+            text = std::format("*Error*: {}", msg);
         }
         else
         {
@@ -373,13 +364,13 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
     resetPen(bbox.topLeftX, bbox.topLeftY); // move the pen to its starting position.
     resetCharDelimCount();
 
-    for (const std::string& line : split(wrappedLines, "\n"))
+    for (const std::string& line : split(wrappedLines, '\n'))
     {
         int lineHeight = maxAscender(line);
         pen.x = bbox.topLeftX;
         pen.y -= lineHeight;
 
-        std::vector<std::string> words = split(line, " ");
+        std::vector<std::string> words = split(line, ' ');
         for (size_t i = 0; i < words.size(); ++i) {
             bool isLastWord = (i == words.size() - 1);
             drawWord(image, words[i], isLastWord);
@@ -409,8 +400,8 @@ std::vector<unsigned char> Writer::generateQuoteImage(std::unordered_map<std::st
     {
         textType            = CREDITS;
         pen.color           = CREDIT_COLOR;
-        text                = "_" + row["title"] + "_, " + WordDelimiters().NEWLINE + row["author"];
-        bbox.topLeftX       = static_cast<int>(std::floor(SCREEN_WIDTH * 0.45));
+        text                = "_" + row["title"] + "_, " + "\n" + row["author"]; // italicize book title, put author on new line
+        bbox.topLeftX       = static_cast<int>(std::floor(SCREEN_WIDTH * 0.45)); // scale credit's bbox down to bottom right of screen
         bbox.topLeftY       = static_cast<int>(std::floor(SCREEN_HEIGHT * 0.85));
         bbox.bottomRightX   = static_cast<int>(std::floor(SCREEN_WIDTH * SCALE_MULTIPLIER));
         bbox.bottomRightY   = static_cast<int>(std::floor(SCREEN_HEIGHT * SCALE_MULTIPLIER));

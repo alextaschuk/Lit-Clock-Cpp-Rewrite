@@ -53,7 +53,7 @@ void Writer::saveImages()
     while (std::getline(quoteFile, line))
     { // TODO: function that returns a single row using quoteCount for line #
         quoteCount++;
-        std::vector<std::string> splitRow = split(line, CharacterDelimiters().TIMESTR);
+        std::vector<std::string> splitRow = split(line, '|');
         if (splitRow.size() != 5) {
             std::println("Error: Row {} is missing a column.", quoteCount + 1);
             continue;
@@ -85,8 +85,9 @@ void Writer::saveImages()
 
         std::string time = row["time"].replace(2, 1, "");
         std::string filepath = projectPath(IMAGE_PATH + "quote_" + time + "_" + std::to_string(imgNum) + "." + IMAGE_FORMAT);
-        std::vector<unsigned char> imgOut = generateQuoteImage(row, INCLUDE_CREDITS);
 
+        std::vector<unsigned char> imgOut = generateQuoteImage(row, INCLUDE_CREDITS);
+        
         if (IMAGE_FORMAT == "bmp") {
             stbi_write_bmp(filepath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, imgOut.data());
         } else if (IMAGE_FORMAT == "png") {
@@ -101,7 +102,8 @@ void Writer::saveImages()
     quoteFile.close();
 }
 
-int main() {
+int main()
+{
     auto start = std::chrono::high_resolution_clock::now();
 
     Writer writer;
