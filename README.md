@@ -83,7 +83,7 @@ Wrap text with this character to _italicize_ it. This may be combined with the b
 
 For example, the CSV stores:
 
-> Henry held out his hand for the note, which Victoria gave over in exchange for a Sweet Caporal. There were only four words: _Tomorrow morning. 2 o’clock_.
+> Henry held out his hand for the note, which Victoria gave over in exchange for a Sweet Caporal. There were only four words: \_Tomorrow morning. 2 o’clock\_.
 
 Which will be formatted as:
 
@@ -126,7 +126,7 @@ Add this character before a formatting delimiter to have the string literal vers
 
 For example, the CSV stores:
 
-> “I will be a sonofa\*\*\*\*h if he ain’t in here at eleven-thirty at night, fartin’ around in the dark with a pair of scissors and a paper sack.”
+> “I will be a sonofa\\\*\\\*\\\*\\\*h if he ain’t in here at eleven-thirty at night, fartin’ around in the dark with a pair of scissors and a paper sack.”
 
 Which will be formatted as:
 
