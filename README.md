@@ -43,13 +43,11 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
     mkdir build && cd build && cmake .. && cd ..
     ```
 
-4. Modify the `WorkingDirectory` in [CPP_clock_build.service](scripts/CPP_clock_build.service) to point to the build folder you just made.
+4. In the [CPP_clock_build.service](scripts/CPP_clock_build.service) script, modify the `WorkingDirectory` variable to store the path to the build folder you just made.
+    - The script is ran once during the Pi's startup to compile the program.
 
-    - This script is ran once during the Pi's startup to compile the program.
-
-5. Modify the `ExecStart` in [CPP_clock.service](scripts/CPP_clock.service) to point to the `clock` binary in the build/ folder.
-
-    - This script starts the clock program after CPP_clock_build.service has run.
+5. In the [CPP_clock.service](scripts/CPP_clock.service) script, modify the `ExecStart` variable to store the path to the `clock` binary in the build/ folder.
+    - This script starts the clock after CPP_clock_build.service has run.
 
 6. Move the scripts to /etc/systemd/system with:
 
@@ -59,7 +57,7 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
     mv scripts/CPP_clock.service /etc/systemd/system/CPP_clock.service
     ```
 
-7. Reload the systemd manager so that it sees the new service file:
+7. Reload the systemd manager so that it sees the new service files:
 
     ```sh
     sudo systemctl daemon-reload
@@ -98,7 +96,7 @@ Wrap text with this character to *bold* it. This may be combined with the bold d
 There aren't any quotes yet where the bold delimiter has been needed, but I have added it as an option for future quotes. It is also used when an error message is printed to the screen.
 
 
-### Newline / End of line `\n` (U+000A, End of Line)
+### Move Text to a New Line `\n` (U+000A, End of Line)
 
 Any succeeding characters in a word after this character are put on a new line.
 
@@ -137,7 +135,7 @@ Which will be formatted as:
 
 ## Functionality Improvements
 
-Writing this project in C++ gave me a lot more freedom in converting quotes from a CSV to images.
+Writing this project in C++ gave me a lot more freedom in the way that quotes are converted to images.
 
 ### Better optimized text wrapping
 
