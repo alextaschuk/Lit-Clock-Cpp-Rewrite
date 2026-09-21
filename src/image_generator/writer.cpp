@@ -212,6 +212,7 @@ void Writer::findOptimalFontScale(std::string& wrappedLines)
     // Binary search to find the most optimal font scale.
     while (min <= max)
     {
+        resetDelimCount();
         tempPen.x = bbox.topLeftX;
         tempPen.y = bbox.topLeftY;
         float mid = std::floor(min + (max - min) / 2);
