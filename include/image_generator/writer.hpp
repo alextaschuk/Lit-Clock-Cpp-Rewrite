@@ -151,8 +151,8 @@ class Writer {
     // wrappedLines: output parameter. Stores the text broken up with newline delimiters to fit in the bbox horizontally.
     //      If the text cannot fit (the optimal font scale is < `MIN_FONT_SCALE`), this stores an empty string.
     //
-    // Returns the optimal font scale that is found, or 0 if the text cannot fit
-    void findOptimalFontScale(std::string& wrappedLines);
+    // Returns the optimal font scale that is found, or -1 if the text cannot fit.
+    float findOptimalFontScale(std::string& wrappedLines);
 
 
     // A helper to `findOptimalFontScale()` that Wraps text using a given font scale such that the text doesn't overflow past
@@ -222,7 +222,12 @@ class Writer {
     //
     // Returns the product of the advance width retrieved from stbtt_GetCodepointHMetrics
     // and a pen's font scale.
-    float getAdvanceWidth( const int& codepoint, const stbtt_fontinfo& font, const float& fontScale);
+    float getAdvanceWidth( const int& codepoint, const stbtt_fontinfo& font, const float& fontScale)
+    {
+        int advanceWidth = 0;
+        stbtt_GetCodepointHMetrics(&font, codepoint, &advanceWidth, 0); 
+        return advanceWidth * fontScale;
+    }
     
 
     // Finds the vertical extent of the tallest glyph's ascender in a line of text, measured as pixels above the baseline.

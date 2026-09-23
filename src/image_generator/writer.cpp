@@ -1,10 +1,10 @@
 #include "image_generator/writer.hpp"
+#include "spdlog/spdlog.h"
 #include "utils.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <print>
 #include <cctype>
 #include <string>
 #include <unordered_map>
@@ -18,14 +18,6 @@
 
 #include "constants.hpp"
 #include "image_generator/delimiter.hpp"
-
-
-float Writer::getAdvanceWidth(const int& codepoint, const stbtt_fontinfo& font, const float& fontScale)
-{
-    int advanceWidth = 0;
-    stbtt_GetCodepointHMetrics(&font, codepoint, &advanceWidth, 0); 
-    return advanceWidth * fontScale;
-}
 
 
 int Writer::maxAscender(const std::string& line)
@@ -52,7 +44,7 @@ int Writer::maxAscender(const std::string& line)
 float Writer::getLineWidth(Pen& pen, const std::string& line)
 {
     if (line.size() == 0)
-        return 0.0f;
+        return 0;
 
     float lineWidth = 0.0f;
     for (size_t i = 0; i < line.size(); )
@@ -76,7 +68,7 @@ float Writer::getLineWidth(Pen& pen, const std::string& line)
 
 void Writer::resizeCreditBbox(const std::string& wrappedLines)
 {
-    float longestLineWidthF = 0.0f;
+    float longestLineWidthF = 0;
     int linesHeight = 0, longestLineWidth = 0;
     for (const std::string& line : split(wrappedLines, '\n'))
     {
@@ -202,7 +194,7 @@ std::string Writer::wrapText(Pen& pen)
 }
 
 
-void Writer::findOptimalFontScale(std::string& wrappedLines)
+float Writer::findOptimalFontScale(std::string& wrappedLines)
 {
     float min = MIN_FONT_SCALE, max = MAX_FONT_SCALE;
     float optimalScale = 0.0f;
@@ -227,12 +219,10 @@ void Writer::findOptimalFontScale(std::string& wrappedLines)
             max = mid - 1; // Text didn't fit
     }
 
-    if (optimalScale > 0) {
-        pen.fontScale = stbtt_ScaleForPixelHeight(&fonts.regular, optimalScale);
-    } else {
-        std::println("Error: text cannot fit in its bbox.");
-        return; // TODO: better error handling.
-    }
+    if (optimalScale > 0 && wrappedLines.size() > 0)
+        return optimalScale;
+    
+    return 0; // text doesn't fit in bbox
 }
 
 
@@ -337,9 +327,9 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
         size_t timestrBegin = 0, timestrEnd = 0;
         if (findTimestrIndices(row, timestrBegin, timestrEnd) < 0)
         {
-            std::string msg = std::format("Time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
-            std::println("Error: {}", msg);
-            text = std::format("*Error*: {}", msg);
+            const std::string errMsg = std::format("Time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
+            spdlog::warn("{}", errMsg);
+            text = std::format("*Error*: {}", errMsg);
         }
         else
         {
@@ -351,8 +341,19 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
     }
 
     std::string wrappedLines;
-    findOptimalFontScale(wrappedLines);
-    if (textType == CREDITS) { resizeCreditBbox(wrappedLines); } // Resize the credit bbox to optimize the quote bbox's size.
+    float optimalFontScale = findOptimalFontScale(wrappedLines);
+    if (optimalFontScale == 0)
+    {
+        const std::string errMsg = std::format("Text starting with \"{}...\" cannot fit inside of its bbox.", text.substr(0,50));
+        spdlog::warn("{}", errMsg);
+        text = std::format("*Error*: {}", errMsg);
+        optimalFontScale = findOptimalFontScale(wrappedLines);
+    }
+    pen.fontScale = stbtt_ScaleForPixelHeight(&fonts.regular, optimalFontScale);
+
+    if (textType == CREDITS)
+        resizeCreditBbox(wrappedLines); // Resize the credit bbox to optimize the quote bbox's size.
+
     resetPen(bbox.topLeftX, bbox.topLeftY); // move the pen to its starting position.
     resetDelimCount();
 
@@ -370,6 +371,7 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
         
         pen.y += getLineHeight(pen.font, pen.fontScale) + lineHeight; // move to the next line and continue drawing
     }
+
     resetPen(bbox.topLeftX, bbox.topLeftY);
     resetDelimCount();
 }
@@ -389,7 +391,7 @@ std::vector<unsigned char> Writer::generateQuoteImage(std::unordered_map<std::st
     quoteBBox.bottomRightY  = static_cast<int>(std::floor(SCREEN_HEIGHT * SCALE_MULTIPLIER));
 
     if (includeCredits)
-    {
+    { // draw the title of the quote's book and its author
         textType            = CREDITS;
         pen.color           = CREDIT_COLOR;
         text                = "_" + row["title"] + "_, " + "\n" + row["author"]; // e.g. "_Dune_, \nFrank Herbert"
