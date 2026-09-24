@@ -70,6 +70,12 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
     sudo systemctl enable --now CPP_clock.service
     ```
 
+### Clock Configuration
+
+There are a couple of global variables that can be configured for the clock. They exist in [constants.hpp](/include/constants.hpp). There are two notable variables:
+
+- `VCOM`: This must match the VCOM value that's on the screen's FPC.
+- `INCLUDE_CREDITS`: Set to `true` (default) if you want the book title and author of a quote to be displayed under it, or `false` to only show the quote.
 
 ## Text Formatting
 
@@ -94,6 +100,10 @@ Which will be formatted as:
 Wrap text with this character to **bold** it. This may be combined with the bold delimiter to make the text ***italic and bold***.
 
 There aren't any quotes yet where the bold delimiter has been needed, but I have added it as an option for future quotes. It is also used when an error message is printed to the screen.
+
+<p align="center">
+    <img src="share/examples/bold-formatting.png" height="400"/>
+</p>
 
 
 ### Move Text to a New Line `\n` (U+000A, End of Line)
