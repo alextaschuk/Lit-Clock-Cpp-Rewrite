@@ -175,12 +175,12 @@ This improves the readability of text, especially for quotes that are several li
 
 ## Planned Features
 
-[ ] parallelize writer.cpp
-[ ] Implement Knuth-Plass's line breaking algo for longer quotes (maybe).
+- [ ] parallelize writer.cpp
+- [ ] Implement Knuth-Plass's line breaking algo for longer quotes (maybe).
     - https://web.archive.org/web/20180712183928/https://defoe.sourceforge.net/folio/knuth-plass.html
     - https://www.unicode.org/reports/tr14/
-[ ] fix writing calculations to convert floats to ints as late as possible
-[ ] clear screen on sigint
-[ ] check if it's possible to use 8bpp instead of 4bpp, and if there is even a difference
-[ ] optimize waveshare's code / reduce the amount of time it takes to display an image.
-[ ] redesign delimiter class and logic.
+- [ ] fix writing calculations to convert floats to ints as late as possible
+- [ ] clear screen on sigint
+- [ ] check if it's possible to use 8bpp instead of 4bpp, and if there is even a difference
+- [ ] optimize waveshare's code / reduce the amount of time it takes to display an image.
+- [ ] redesign delimiter class and logic.
