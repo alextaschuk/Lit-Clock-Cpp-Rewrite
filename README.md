@@ -91,7 +91,7 @@ Which will be formatted as:
 
 ### Bold `*` (U+002A, Asterisk)
 
-Wrap text with this character to *bold* it. This may be combined with the bold delimiter to make the text ***italic and bold***.
+Wrap text with this character to **bold** it. This may be combined with the bold delimiter to make the text ***italic and bold***.
 
 There aren't any quotes yet where the bold delimiter has been needed, but I have added it as an option for future quotes. It is also used when an error message is printed to the screen.
 
@@ -133,18 +133,34 @@ Which will be formatted as:
 </p>
 
 
-## Functionality Improvements
+## Functionality Improvements and Changes
 
 Writing this project in C++ gave me a lot more freedom in the way that quotes are converted to images.
 
-### Better optimized text wrapping
+### Improved Vertical Text Spacing
 
+A drawback to the quote-to-image program I originally wrote in Python is that when creating a new `ImageFont.truetype` object from Pillow a `size` argument must be passed, which is the font's size, in pixels (i.e., the size of the font, already scaled to px units). I had to manually implement a lot of the the text writing functionality that Pillow provides via `ImageDraw.Draw.text`.
 
-### Improved horizontal and vertical glyph spacing.
+The most significant improvement is how lines of text are vertically spaced apart. Pillow doesn't expose a TT font's linegap, so the spacing between two lines of text in my Python program is calculated with `pen.coords['y'] += int(pen.font.getbbox("A")[3] + 4)`.
 
+- For a more in-depth explanation about Pillow's reasoning for this workaround, read this [comment](https://github.com/python-pillow/Pillow/issues/6469#issuecomment-1203036583).
 
-### More accurate custom text formatting.
+Since stb_truetype.h _does_ expose a TT font's linegap, it is much easier to calculate the font's intended vertical spacing between lines of text (scaled for px units):
 
+```C++
+int getLineHeight(const stbtt_fontinfo& font, const float& fontScale)
+{
+    int ascent, descent, lineGap;
+    stbtt_GetFontVMetrics(&font, &ascent, &descent, &lineGap);
+    return static_cast<int>((ascent - descent + lineGap) * fontScale);
+}
+```
+
+This improves the readability of text, especially for quotes that are several lines long:
+
+<p align="center">
+    <img src="share/examples/vertical-spacing-comparison.png" height="400"/>
+</p>
 
 ### Benchmark for Saving Images
 
