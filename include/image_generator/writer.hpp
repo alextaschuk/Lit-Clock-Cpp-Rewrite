@@ -145,20 +145,20 @@ class Writer {
     void drawWord(std::vector<unsigned char>& image, std::string word, bool isLast);
 
 
-    // Finds the maximum possible font scale (in font units) that can be used for a given bounding box and determiens how the text
+    // Finds the maximum possible pixel height that can be used for a given bounding box and determiens how the text
     // should be wrapped to fit in the bbox horizontally.
     //
     // wrappedLines: output parameter. Stores the text broken up with newline delimiters to fit in the bbox horizontally.
-    //      If the text cannot fit (the optimal font scale is < `MIN_FONT_SCALE`), this stores an empty string.
+    //      If the text cannot fit (the optimal font scale is < `MIN_PIXEL_HEIGHT`), this stores an empty string.
     //
     // Returns the optimal font scale that is found, or -1 if the text cannot fit.
-    float findOptimalFontScale(std::string& wrappedLines);
+    float findOptimalPixelHeight(std::string& wrappedLines);
 
 
-    // A helper to `findOptimalFontScale()` that Wraps text using a given font scale such that the text doesn't overflow past
+    // A helper to `findOptimalPixelHeight()` that Wraps text using a given font scale such that the text doesn't overflow past
     // the rightmost x coordinate of the bbox.
     //
-    // pen: A temporary pen that is created and destroyed in `findOptimalFontScale()`.
+    // pen: A temporary pen that is created and destroyed in `findOptimalPixelHeight()`.
     // 
     // Returns the text to be written with newline delimiters if it fits. Otherwise, an empty string is returned.
     std::string wrapText(Pen& pen);
@@ -178,7 +178,7 @@ class Writer {
     // A helper to `wrapText()` that checks if a word needs to be moved onto a new line, either due to text wrapping
     // (it doesn't fit on the current line) or custom formatting (contains one or more "\n").
     //
-    // pen: A temporary pen that is created and destroyed in `findOptimalFontScale()`.
+    // pen: A temporary pen that is created and destroyed in `findOptimalPixelHeight()`.
     // word: The word to be formatted.
     // lines: The text to be written onto an image.
     // wordLength: The length of the word in pixels.
@@ -241,7 +241,7 @@ class Writer {
     int maxAscender(const std::string& line);
 
 
-    // Calculates a font's recommended line spacing (the vertical distance from one line's baseline to
+    // Calculates a font's recommended distance between two lines of text (the vertical distance from one line's baseline to
     // the next line's baseline) in pixels, at a given font scale.
     //
     // font: The font whose line spacing is being measured.
@@ -249,12 +249,13 @@ class Writer {
     //
     // Returns the font's recommended pixel distance to increase the pen's Y coordinate by to move to the
     // next line.
-    int getLineHeight(const stbtt_fontinfo& font, const float& fontScale) {
+    int getLineHeight(const stbtt_fontinfo& font, const float& fontScale)
+    {
+        int ascent, descent, lineGap;
+        stbtt_GetFontVMetrics(&font, &ascent, &descent, &lineGap);
         // (ascent - descent) is the height of the font's tallest glyph.
         // lineGap is the font's recommended spacing between the bottom of one row's descent and the top
         // of the next row's ascent.
-        int ascent, descent, lineGap;
-        stbtt_GetFontVMetrics(&font, &ascent, &descent, &lineGap);
         return static_cast<int>((ascent - descent + lineGap) * fontScale);
     }
 
@@ -268,7 +269,7 @@ class Writer {
     // Shrinks the credits bbox to fit tightly around its text, allowing the quote bbox to be enlarged and fill the blank space.
     //
     // Should be called after the optimal font scale for the credits text has been applied to `pen`, and after that text has been
-    // wrapped (see `findOptimalFontScale` / `wrapText`). Measures the actual rendered width & height of `wrappedLines`
+    // wrapped (see `findOptimalPixelHeight` / `wrapText`). Measures the actual rendered width & height of `wrappedLines`
     // at the credits font scale and uses it to move the top-left corner of the credits bbox's inward so that the bbox's width and
     // height match the credits text's actual width and height.
     //

@@ -9,7 +9,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-//#include <omp.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
@@ -194,10 +193,10 @@ std::string Writer::wrapText(Pen& pen)
 }
 
 
-float Writer::findOptimalFontScale(std::string& wrappedLines)
+float Writer::findOptimalPixelHeight(std::string& wrappedLines)
 {
-    float min = MIN_FONT_SCALE, max = MAX_FONT_SCALE;
-    float optimalScale = 0.0f;
+    float min = MIN_PIXEL_HEIGHT, max = MAX_PIXEL_HEIGHT;
+    float optimalPixelHeight = 0.0f;
     Pen tempPen = this->pen;
     tempPen.font = fonts.regular;
 
@@ -212,15 +211,15 @@ float Writer::findOptimalFontScale(std::string& wrappedLines)
         
         std::string wrappedText = wrapText(tempPen);
         if (!wrappedText.empty()) { // Text fits, try a larger font scale
-            optimalScale = mid;
+            optimalPixelHeight = mid;
             min = mid + 1;
             wrappedLines = wrappedText;
         } else
             max = mid - 1; // Text didn't fit
     }
 
-    if (optimalScale > 0 && wrappedLines.size() > 0)
-        return optimalScale;
+    if (optimalPixelHeight > 0 && wrappedLines.size() > 0)
+        return optimalPixelHeight;
     
     return 0; // text doesn't fit in bbox
 }
@@ -341,15 +340,15 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
     }
 
     std::string wrappedLines;
-    float optimalFontScale = findOptimalFontScale(wrappedLines);
-    if (optimalFontScale == 0)
+    float optimalPixelHeight = findOptimalPixelHeight(wrappedLines);
+    if (optimalPixelHeight == 0)
     {
         const std::string errMsg = std::format("Text starting with \"{}...\" cannot fit inside of its bbox.", text.substr(0,50));
         spdlog::warn("{}", errMsg);
         text = std::format("*Error*: {}", errMsg);
-        optimalFontScale = findOptimalFontScale(wrappedLines);
+        optimalPixelHeight = findOptimalPixelHeight(wrappedLines);
     }
-    pen.fontScale = stbtt_ScaleForPixelHeight(&fonts.regular, optimalFontScale);
+    pen.fontScale = stbtt_ScaleForPixelHeight(&fonts.regular, optimalPixelHeight);
 
     if (textType == CREDITS)
         resizeCreditBbox(wrappedLines); // Resize the credit bbox to optimize the quote bbox's size.
