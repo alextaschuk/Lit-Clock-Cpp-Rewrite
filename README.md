@@ -102,8 +102,26 @@ Wrap text with this character to **bold** it. This may be combined with the bold
 
 There aren't any quotes yet where the bold delimiter has been needed, but I have added it as an option for future quotes. It is also used when an error message is printed to the screen.
 
+Here's an example: 
+
+> This is an example of \*bold\* text.
+
 <p align="center">
     <img src="share/examples/bold-formatting.png" height="400"/>
+</p>
+
+### Italic and Bold
+
+Text can be wrapped with both the italic and bold delimiters to make it ***italic and bold***.
+
+There aren't any quotes yet where the bold delimiter has been needed, but I have added it as an option for future quotes.
+
+Here's an example:
+
+> This is an example of \_\*italic and bold\*\_ text.
+
+<p align="center">
+    <img src="share/examples/italic-bold-formatting.png" height="400"/>
 </p>
 
 
