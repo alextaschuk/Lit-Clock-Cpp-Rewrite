@@ -15,6 +15,7 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
 1. [How to Set up the Clock](#how-to-set-up-the-clock)
 2. [Text Formatting](#text-formatting)
 3. [Functionality Improvements](#functionality-improvements)
+4. [Planned Features](#planned-features)
 
 </details>
 
@@ -172,7 +173,14 @@ This improves the readability of text, especially for quotes that are several li
     <img src="share/examples/vertical-spacing-comparison.png" height="400"/>
 </p>
 
-### Benchmark for Saving Images
+## Planned Features
 
-
-### Benchmark for Displaying Images on Clock
+[ ] parallelize writer.cpp
+[ ] Implement Knuth-Plass's line breaking algo for longer quotes (maybe).
+    - https://web.archive.org/web/20180712183928/https://defoe.sourceforge.net/folio/knuth-plass.html
+    - https://www.unicode.org/reports/tr14/
+[ ] fix writing calculations to convert floats to ints as late as possible
+[ ] clear screen on sigint
+[ ] check if it's possible to use 8bpp instead of 4bpp, and if there is even a difference
+[ ] optimize waveshare's code / reduce the amount of time it takes to display an image.
+[ ] redesign delimiter class and logic.
