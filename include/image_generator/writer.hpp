@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "spdlog/spdlog.h"
 #include "stb/stb_truetype.h"
 
 #include "delimiter.hpp"
@@ -117,23 +118,31 @@ class Writer {
     void writeInBBox(std::vector<unsigned char>& image, std::unordered_map<std::string, std::string> row);
 
 
-    // A helper to `writeInBBox()` that finds the indices where the timestring begins and ends in a quote.
+    // A helper to `writeInBBox()` that wraps `Writer::text` with the timestring delimiter, or replaces it with an error message if the
+    // timestring is missing or is not found in the quote.
     //
     // row: A row from the CSV file.
     // timestrBegin: output parameter. Index where the first time string delim is found in the text.
     // timestrEnd: output parameter. Index where the second (last) time string delim is found in the text.
-    //
-    // Returns -1 if the timestring is not found, 0 on success.
-    int findTimestrIndices(std::unordered_map<std::string, std::string> row, size_t& timestrBegin, size_t& timestrEnd) {
-        if (row["timestring"].empty())
-            return -1;
+    // text: output parameter. Wraps the quote's substring containing the timestring with the timestring delim, and an error message otherwise.
+    void wrapTimestring(std::unordered_map<std::string, std::string> row, std::string& text) {
+        size_t timestrBegin = 0, timestrEnd = 0;
+        const std::string errMsg = std::format("Time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
 
         timestrBegin = toLower(row["quote"]).find(toLower(row["timestring"]));
-        if (timestrBegin == std::string::npos) 
-            return -1; // timestring not found
-
-        timestrEnd = timestrBegin + row["timestring"].size();
-        return 0;
+        if (timestrBegin == std::string::npos)
+        {
+            spdlog::warn("{}", errMsg);
+            text = std::format("*Error*: {}", errMsg);   
+        }
+        else
+        {
+            timestrEnd = timestrBegin + row["timestring"].size();
+            std::string delim = CharacterDelimiters().TIMESTR;
+            text = row["quote"].substr(0, timestrBegin);
+            text += delim + row["quote"].substr(timestrBegin, timestrEnd - timestrBegin) + delim;
+            text += row["quote"].substr(timestrEnd);
+        }
     }
 
 

@@ -1,6 +1,4 @@
 #include "image_generator/writer.hpp"
-#include "spdlog/spdlog.h"
-#include "utils.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -14,13 +12,18 @@
 #include "stb/stb_truetype.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb/stb_image_write.h"
+#include "spdlog/spdlog.h"
 
 #include "constants.hpp"
 #include "image_generator/delimiter.hpp"
+#include "utils.hpp"
 
 
 int Writer::maxAscender(const std::string& line)
 {
+    if (line.size() == 0)
+        return 0;
+
     int maxHeight = 0;
     for (const std::string& word : split(line, ' '))
     {
@@ -322,22 +325,7 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
     // Wrap the timestring with "|" so that it can be found again when writing the quote.
     // If the timestring isn't found, write an error message instead.
     if (textType == QUOTE)
-    {
-        size_t timestrBegin = 0, timestrEnd = 0;
-        if (findTimestrIndices(row, timestrBegin, timestrEnd) < 0)
-        {
-            const std::string errMsg = std::format("Time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
-            spdlog::warn("{}", errMsg);
-            text = std::format("*Error*: {}", errMsg);
-        }
-        else
-        {
-            std::string delim = CharacterDelimiters().TIMESTR;
-            text = row["quote"].substr(0, timestrBegin);
-            text += delim + row["quote"].substr(timestrBegin, timestrEnd - timestrBegin) + delim;
-            text += row["quote"].substr(timestrEnd);
-        }
-    }
+        wrapTimestring(row, text);
 
     std::string wrappedLines;
     float optimalPixelHeight = findOptimalPixelHeight(wrappedLines);
@@ -361,9 +349,10 @@ void Writer::writeInBBox(std::vector<unsigned char>& image, std::unordered_map<s
         int lineHeight = maxAscender(line);
         pen.x = bbox.topLeftX;
         pen.y -= lineHeight;
-
         std::vector<std::string> words = split(line, ' ');
-        for (size_t i = 0; i < words.size(); ++i) {
+
+        for (size_t i = 0; i < words.size(); ++i)
+        {
             bool isLastWord = (i == words.size() - 1);
             drawWord(image, words[i], isLastWord);
         }
