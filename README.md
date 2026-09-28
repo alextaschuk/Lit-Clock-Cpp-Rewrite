@@ -11,12 +11,10 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
 ## Table of Contents
 <details>
 <summary>Click to View</summary>
-
 1. [How to Set up the Clock](#how-to-set-up-the-clock)
 2. [Text Formatting](#text-formatting)
 3. [Functionality Improvements](#functionality-improvements)
 4. [Planned Features](#planned-features)
-
 </details>
 
 ## How to Set up the Clock
@@ -38,15 +36,30 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
 
     - *Note*: If you forgot the `--recursive` flag, run `git submodule update --init` to clone the logging library locally.
 
-3. `cd` into the Repository and make a build folder:
+3. `cd` into the repository, then run the folowing to make a build folder and generate the project's build files:
 
     ```sh
-    mkdir build && cd build && cmake .. && cd ..
+    mkdir build && cd build && cmake ..
     ```
 
-### Clock Configuration
+4. Download the CSV file containing all of the quotes from the Python Clock's remote repo:
 
-There are a couple of global variables that can be configured for the clock. They exist in [constants.hpp](/include/constants.hpp). There are two notable variables:
+    ```sh
+    cd .. && curl -fL -o share/quotes.csv "https://raw.githubusercontent.com/alextaschuk/Literary-Quote-Clock/main/quotes.csv"
+    ```
+
+5. Update the CSV to use the C++ Clock's formatting delimiters instead of the Python Clock's:
+
+    ```sh
+    sed -i \
+        -e 's/◻/_/g' \
+        -e 's/◯/*/g' \
+        -e 's/␤/\\n/g' \
+        -e 's/⇇/\\n\\n/g' \
+        share/quotes.csv
+    ```
+
+6. There are a couple of global variables that can be configured for the clock. They exist in [constants.hpp](/include/constants.hpp). There are two notable variables:
 
 - `VCOM`: This must match the VCOM value that's on the screen's FPC.
 - `INCLUDE_CREDITS`: Set to `true` (default) if you want the book title and author of a quote to be displayed under it, or `false` to only show the quote.
@@ -93,7 +106,7 @@ I've made a script that can be added as a cron job that runs once a day to updat
 
 ***
 
-1. In the [update_clock.sh](/scripts/update_clock.sh), modify the `DEST` and `SHA_FILE` variables to store the path to the clock's CSV file containing the quotes, and the .sha file to track the most recent hash of the Python Clock's CSV (quotes.csv.sha is made by default if it doesn't exist, so you only need to add a valid filepath).
+1. In [update_clock.sh](/scripts/update_clock.sh), modify the `DEST` and `SHA_FILE` variables to store the path to the clock's CSV file containing the quotes, and the .sha file to track the most recent hash of the Python Clock's CSV (quotes.csv.sha is made by default if it doesn't exist, so you only need to add a valid filepath).
 
 2. Add the script as a cron job:
 
