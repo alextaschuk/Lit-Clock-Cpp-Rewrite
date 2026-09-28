@@ -44,6 +44,14 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
     mkdir build && cd build && cmake .. && cd ..
     ```
 
+### Clock Configuration
+
+There are a couple of global variables that can be configured for the clock. They exist in [constants.hpp](/include/constants.hpp). There are two notable variables:
+
+- `VCOM`: This must match the VCOM value that's on the screen's FPC.
+- `INCLUDE_CREDITS`: Set to `true` (default) if you want the book title and author of a quote to be displayed under it, or `false` to only show the quote.
+
+
 ### Configuring the Startup Scripts
 
 There are two unit configuration files that build and run the clock when the Pi is started.
@@ -74,13 +82,6 @@ There are two unit configuration files that build and run the clock when the Pi 
     sudo systemctl enable --now CPP_clock_build.service
     sudo systemctl enable --now CPP_clock.service
     ```
-
-### Clock Configuration
-
-There are a couple of global variables that can be configured for the clock. They exist in [constants.hpp](/include/constants.hpp). There are two notable variables:
-
-- `VCOM`: This must match the VCOM value that's on the screen's FPC.
-- `INCLUDE_CREDITS`: Set to `true` (default) if you want the book title and author of a quote to be displayed under it, or `false` to only show the quote.
 
 ### Enable Automatic Updates
 
