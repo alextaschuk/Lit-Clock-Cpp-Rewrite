@@ -1,5 +1,5 @@
 #!/bin/bash
-##########################################################
+#
 # To run this with a cron job once a day at 4:00 A.M., run
 # sudo crontab -e
 # Then, add the following in the file that opens:
@@ -35,8 +35,7 @@ REMOTE_SHA=$(curl -s \
 LOCAL_SHA=$(cat "$SHA_FILE" 2>/dev/null)
 
 if [ "$REMOTE_SHA" != "$LOCAL_SHA" ]; then
-    echo "quotes.csv has changed. Downloading..."
-
+    # CSV file changed since last check, so download the new version
     if curl -fL -o "$DEST" \
         "https://raw.githubusercontent.com/$REPO/$BRANCH/$FILE"; then
 
@@ -49,12 +48,8 @@ if [ "$REMOTE_SHA" != "$LOCAL_SHA" ]; then
 
         echo "$REMOTE_SHA" > "$SHA_FILE" # update with the most recent hash
     else
-        echo "Failed to download latest version of Python Clock's CSV."
-        exit 1
+        exit 1 # CSV failed to download
     fi
-else
-    echo "Python Clock's CSV has not changed."
 fi
-
 
 sudo shutdown -r now

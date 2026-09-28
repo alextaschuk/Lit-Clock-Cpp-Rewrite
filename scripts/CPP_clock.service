@@ -11,7 +11,7 @@ Requires=CPP_clock_build.service
 
 [Service]
 Type=simple
-ExecStart=/path/to/clock/binary
+ExecStart=/path/to/clock/build/binary
 KillSignal=SIGINT
 Restart=on-failure
 
