@@ -22,7 +22,7 @@ FILE="quotes.csv"
 DEST="/home/user/path/to/clock/share/quotes.csv" # Modify to point to the correct file
 SHA_FILE="/home/user/path/to/clock/share/quotes.csv.sha" # Modify to point to the correct file
 
-sudo systemctl stop CCP_clock.service
+sudo systemctl stop CPP_clock.service
 
 git pull
 
@@ -42,8 +42,8 @@ if [ "$REMOTE_SHA" != "$LOCAL_SHA" ]; then
         sed -i \
             -e 's/◻/_/g' \
             -e 's/◯/*/g' \
-            -e 's/␤/\n/g' \
-            -e 's/⇇/\n\n/g' \
+            -e 's/␤/\\n/g' \
+            -e 's/⇇/\\n\\n/g' \
             "$DEST"
 
         echo "$REMOTE_SHA" > "$SHA_FILE" # update with the most recent hash
