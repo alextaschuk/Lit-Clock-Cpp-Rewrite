@@ -44,13 +44,17 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
     mkdir build && cd build && cmake .. && cd ..
     ```
 
-4. In the [CPP_clock_build.service](scripts/CPP_clock_build.service) script, modify the `WorkingDirectory` variable to store the path to the build folder you just made.
+### Configuring the Startup Scripts
+
+There are two unit configuration files that build and run the clock when the Pi is started.
+
+1. In the [CPP_clock_build.service](scripts/CPP_clock_build.service) script, modify the `WorkingDirectory` variable to store the path to the build folder you just made.
     - The script is ran once during the Pi's startup to compile the program.
 
-5. In the [CPP_clock.service](scripts/CPP_clock.service) script, modify the `ExecStart` variable to store the path to the `clock` binary in the build/ folder.
+2. In the [CPP_clock.service](scripts/CPP_clock.service) script, modify the `ExecStart` variable to store the path to the `clock` binary in the build/ folder.
     - This script starts the clock after CPP_clock_build.service has run.
 
-6. Move the scripts to /etc/systemd/system with:
+3. Move the scripts to /etc/systemd/system with:
 
     ```sh
     mv scripts/CPP_clock_build.service /etc/systemd/system/CPP_clock_build.service
@@ -58,13 +62,13 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
     mv scripts/CPP_clock.service /etc/systemd/system/CPP_clock.service
     ```
 
-7. Reload the systemd manager so that it sees the new service files:
+4. Reload the systemd manager so that it sees the new service files:
 
     ```sh
     sudo systemctl daemon-reload
     ```
 
-8. Enable the scripts and start the clock:
+5. Enable the scripts and start the clock:
 
     ```sh
     sudo systemctl enable --now CPP_clock_build.service
@@ -77,6 +81,32 @@ There are a couple of global variables that can be configured for the clock. The
 
 - `VCOM`: This must match the VCOM value that's on the screen's FPC.
 - `INCLUDE_CREDITS`: Set to `true` (default) if you want the book title and author of a quote to be displayed under it, or `false` to only show the quote.
+
+### Enable Automatic Updates
+
+I've made a script that can be added as a cron job that runs once a day to update the clock. It does two things:
+
+- Pulls changes from the remote repo for this project.
+
+- Since the Python Clock is where the most up-to-date version of the quotes CSV file lives, the hash of the most recent CSV on the Python Clock's repo is compared against the its last recorded hash on the local device. If the hashes don't match (changes have been pushed to the CSV since the last check), the CSV is downloaded and overwrites the current local version. Then, the CSV file is edited to use the CPP Clock's formatting delimiters.
+
+***
+
+1. In the [update_clock.sh](/scripts/update_clock.sh), modify the `DEST` and `SHA_FILE` variables to store the path to the clock's CSV file containing the quotes, and the .sha file to track the most recent hash of the Python Clock's CSV (quotes.csv.sha is made by default if it doesn't exist, so you only need to add a valid filepath).
+
+2. Add the script as a cron job:
+
+    ```sh
+    sudo crontab -e
+    ```
+
+3. Add the following in the file that opens (this will run the script at 04:00 every day):
+
+    ```sh
+    0 4 * * * bash /path/to/clock/scripts/update_clock.sh
+    ```
+
+    - Don't forget to modify the path!
 
 ## Text Formatting
 
