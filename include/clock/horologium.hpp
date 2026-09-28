@@ -51,7 +51,10 @@ class Horologium
 
             int numCachedQuotes = cacheQuotes();
             if ( numCachedQuotes == -1) {
-                std::println("Error: Failed to open quotes file.");
+                spdlog::critical("Failed to open CSV file containing clock's quotes.");
+                EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
+                DEV_Module_Exit();
+                exit(0);
             } else {
                 spdlog::info("Cached {0:d} quotes.", numCachedQuotes);
             }

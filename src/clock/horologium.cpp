@@ -19,7 +19,8 @@
 int Horologium::cacheQuotes()
 {    
     std::ifstream quoteFile(projectPath(QUOTES_PATH));
-    if (!quoteFile.is_open()) { return -1; }
+    if (!quoteFile.is_open())
+        return -1;
 
     std::string line;
     std::getline(quoteFile, line); // skip the header row
@@ -44,7 +45,7 @@ int Horologium::cacheQuotes()
         quoteCount++;
         std::vector<std::string> splitRow = split(line, '|');
         if (splitRow.size() != 5){
-            std::println("Error: Row {} is missing a column: {}", quoteCount, splitRow);
+            std::println("Error: Row {} is missing a column", quoteCount);
             continue;
         }
 
