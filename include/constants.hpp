@@ -5,8 +5,8 @@
 #include <cstddef>
 #include <string>
 
-inline constexpr int SCREEN_WIDTH = 1448;
-inline constexpr int SCREEN_HEIGHT = 1072;
+inline constexpr size_t SCREEN_WIDTH = 1448;
+inline constexpr size_t SCREEN_HEIGHT = 1072;
 inline constexpr size_t BITS_PER_PIXEL = 4;
 inline constexpr int IMAGE_SIZE_8BPP = SCREEN_WIDTH * SCREEN_HEIGHT;
 inline constexpr int IMAGE_SIZE_4BPP = (SCREEN_WIDTH + 1) / 2 * SCREEN_HEIGHT;
@@ -23,8 +23,8 @@ inline const std::string IMAGE_PATH = "images/";
 inline const std::string IMAGE_FORMAT = "png";
 inline constexpr bool INCLUDE_CREDITS = true;
 
-inline constexpr float MIN_FONT_SCALE = 12.0f;
-inline constexpr float MAX_FONT_SCALE = 500.0f;
+inline constexpr float MIN_PIXEL_HEIGHT = 12.0f;
+inline constexpr float MAX_PIXEL_HEIGHT = 500.0f;
 
 inline constexpr int MAX_IMAGES_TO_BUFFER = 3; // buffer 3 images at a time.
 inline constexpr int BUFFER_SIZE = IMAGE_SIZE_4BPP * MAX_IMAGES_TO_BUFFER;
