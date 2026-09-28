@@ -44,7 +44,7 @@ int Horologium::cacheQuotes()
         quoteCount++;
         std::vector<std::string> splitRow = split(line, '|');
         if (splitRow.size() != 5){
-            std::println("Error: Row {} is missing a column.", quoteCount);
+            std::println("Error: Row {} is missing a column: ", quoteCount, splitRow);
             continue;
         }
 
@@ -94,6 +94,7 @@ std::vector<unsigned char> Horologium::getImage(const size_t& quoteHour, const s
     std::uniform_int_distribution<> distr(0, usableRows.size() - 1); // define the range
     
     std::unordered_map<std::string, std::string> selectedRow = usableRows[distr(gen)];
+    spdlog::info("Generating image for {}:{}, includeCredits={}, start of quote: \"{}...\"", hour, minute, includeCredits, selectedRow["quote"].substr(0,50));
     return writer.generateQuoteImage(selectedRow, includeCredits);
 }
 
