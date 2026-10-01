@@ -25,7 +25,6 @@ int Horologium::cacheQuotes()
     std::string line;
     std::getline(quoteFile, line); // skip the header row
 
-    std::string currTime = "00:00";
     std::string prevTime = "00:00";
     std::vector<std::unordered_map<std::string, std::string>> minRows = {}; // all rows for a given minute
     std::unordered_map<std::string, std::string> currRow = 
@@ -37,9 +36,7 @@ int Horologium::cacheQuotes()
         {"author", ""},
     };
 
-    int imgNum = -1;
     size_t quoteCount = 0;
-
     while (std::getline(quoteFile, line))
     {
         quoteCount++;
@@ -57,25 +54,25 @@ int Horologium::cacheQuotes()
 
         int rowMin = std::stoi(currRow["time"].substr(3));
         int rowHour = std::stoi(currRow["time"].substr(0, 2));
-        int currMin = std::stoi(currTime.substr(3));
-        int currHour = std::stoi(currTime.substr(0, 2));
+        int prevMin = std::stoi(prevTime.substr(3));
+        int prevHour = std::stoi(prevTime.substr(0, 2));
 
-        if(rowMin - 1 == currMin)
+        if(rowMin - 1 == prevMin)
         { /* Roll over to the next minute */
             quotes.push_back(minRows);
             minRows.clear();
-            currTime = currTime.substr(0, 2) + ":" + currRow["time"].substr(3);
+            prevTime = prevTime.substr(0, 2) + ":" + currRow["time"].substr(3);
         }
-        else if (rowHour - 1 == currHour)
+        else if (rowHour - 1 == prevHour)
         { /* Roll over to the next hour */
             quotes.push_back(minRows);
             minRows.clear();
-            currTime = currRow["time"].substr(0, 2) + ":00";
+            prevTime = currRow["time"].substr(0, 2) + ":00";
         }
         minRows.push_back(currRow);
     }
     
-    minRows.push_back(currRow);
+    quotes.push_back(minRows);
     return quoteCount;
 }
 
