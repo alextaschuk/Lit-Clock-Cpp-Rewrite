@@ -13,9 +13,18 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
 <summary>Click to View</summary>
 
 1. [How to Set up the Clock](#how-to-set-up-the-clock)
+    1. [Materials](#materials)
+    2. [Setting up the Clock](#setting-up-the-clock)
+    3. [Startup Script Configuration](#startup-script-configuration)
+    4. [Enable Automatic Updates](#enable-automatic-updates)
 2. [Text Formatting](#text-formatting)
-3. [Functionality Improvements](#functionality-improvements)
-4. [Planned Features](#planned-features)
+    1. [_Italic Text_](#italic-_-u005f-low-lineunderscore)
+    2. [**Bold Text**](#bold--u002a-asterisk)
+    3. [***Italic and Bold Text***](#italic-and-bold)
+    4. [Move Text to a New Line](#move-text-to-a-new-line-n-u000a-end-of-line)
+    5. [Escape Character](#escape-character--u005c-reverse-solidusbackslash)
+3. [ Functionality Improvements and Changes](#functionality-improvements-and-changes)\
+    1. [Improved Vertical Text Spacing](#improved-vertical-text-spacing)
 
 </details>
 
@@ -67,7 +76,7 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
 - `INCLUDE_CREDITS`: Set to `true` (default) if you want the book title and author of a quote to be displayed under it, or `false` to only show the quote.
 
 
-### Configuring the Startup Scripts
+### Startup Script Configuration
 
 There are two unit configuration files that build and run the clock when the Pi is started.
 
