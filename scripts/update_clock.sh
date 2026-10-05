@@ -5,7 +5,7 @@
 # Then, add the following in the file that opens:
 # 0 4 * * * bash /path/to/clock/scripts/update_clock.sh
 #
-# This script pulls changes from the remote repo.
+# This script pulls changes from the remote repo's main branch.
 #
 # Since the Python Clock is where the most up-to-date version of the quotes CSV file lives, the
 # hash of the most recent CSV on the Python Clock's repo is compared against the its last
@@ -15,28 +15,34 @@
 #
 # Finally, the Pi is restarted.
 
-set -e # exit the script if a command fails at any point.
+set -euo pipefail # exit the script if a command fails at any point.
 
-REPO="alextaschuk/Literary-Quote-Clock"
+echo "$(date): Begin C++ Clock's update script."
+
+REPO_DIR="/home/user/path/to/clock"  # Modify to point to the repo's root
+DEST="$REPO_DIR/share/quotes.csv"
+SHA_FILE="$REPO_DIR/share/quotes.csv.sha"
+
+PY_REPO="alextaschuk/Literary-Quote-Clock"
 BRANCH="main"
 FILE="quotes.csv"
 
-DEST="/home/user/path/to/clock/share/quotes.csv" # Modify to point to the correct file
-SHA_FILE="/home/user/path/to/clock/share/quotes.csv.sha" # Modify to point to the correct file
+echo "$(date): Attempting to pull from remote repo."
+git -C "$REPO_DIR" pull
 
-git pull
-
-REMOTE_SHA=$(curl -s \
-    "https://api.github.com/repos/$REPO/commits?path=$FILE&sha=$BRANCH&per_page=1" \
+echo "$(date): Attempting to download newer CSV."
+REMOTE_SHA=$(curl -fsS \
+    "https://api.github.com/repos/$PY_REPO/commits?path=$FILE&sha=$BRANCH&per_page=1" \
     | grep -m1 '"sha":' \
     | cut -d'"' -f4)
 
-LOCAL_SHA=$(cat "$SHA_FILE" 2>/dev/null)
+LOCAL_SHA=$(cat "$SHA_FILE" 2>/dev/null || true)
 
 if [ "$REMOTE_SHA" != "$LOCAL_SHA" ]; then
-    # CSV file changed since last check, so download the new version
+    echo "$(date): CSV changed since last check. Downloading new version..."
+
     if curl -fL -o "$DEST" \
-        "https://raw.githubusercontent.com/$REPO/$BRANCH/$FILE"; then
+        "https://raw.githubusercontent.com/$PY_REPO/$BRANCH/$FILE"; then
 
         sed -i \
             -e 's/◻/_/g' \
@@ -47,8 +53,12 @@ if [ "$REMOTE_SHA" != "$LOCAL_SHA" ]; then
 
         echo "$REMOTE_SHA" > "$SHA_FILE" # update with the most recent hash
     else
-        exit 1 # CSV failed to download
+        echo "$(date): CSV failed to download."
+        exit 1
     fi
+else
+    echo "$(date): No changes to the CSV."
 fi
 
+echo "$(date): Restarting the Pi..."
 sudo shutdown -r now
