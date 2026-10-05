@@ -11,10 +11,12 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
 ## Table of Contents
 <details>
 <summary>Click to View</summary>
+
 1. [How to Set up the Clock](#how-to-set-up-the-clock)
 2. [Text Formatting](#text-formatting)
 3. [Functionality Improvements](#functionality-improvements)
 4. [Planned Features](#planned-features)
+
 </details>
 
 ## How to Set up the Clock
