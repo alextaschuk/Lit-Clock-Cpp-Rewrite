@@ -42,10 +42,10 @@ It currently works for Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com
     mkdir build && cd build && cmake ..
     ```
 
-4. Download the CSV file containing all of the quotes from the Python Clock's remote repo:
+4. From the project's root, download the CSV file containing all of the quotes from the Python Clock's remote repo in the share/ folder:
 
     ```sh
-    cd .. && curl -fL -o share/quotes.csv "https://raw.githubusercontent.com/alextaschuk/Literary-Quote-Clock/main/quotes.csv"
+    curl -fL -o share/quotes.csv "https://raw.githubusercontent.com/alextaschuk/Literary-Quote-Clock/main/quotes.csv"
     ```
 
 5. Update the CSV to use the C++ Clock's formatting delimiters instead of the Python Clock's:
@@ -98,29 +98,21 @@ There are two unit configuration files that build and run the clock when the Pi 
 
 ### Enable Automatic Updates
 
-I've made a script that can be added as a cron job that runs once a day to update the clock. It does two things:
-
-- Pulls changes from the remote repo for this project.
-
-- Since the Python Clock is where the most up-to-date version of the quotes CSV file lives, the hash of the most recent CSV on the Python Clock's repo is compared against the its last recorded hash on the local device. If the hashes don't match (changes have been pushed to the CSV since the last check), the CSV is downloaded and overwrites the current local version. Then, the CSV file is edited to use the CPP Clock's formatting delimiters.
-
-***
-
-1. In [update_clock.sh](/scripts/update_clock.sh), modify the `DEST` and `SHA_FILE` variables to store the path to the clock's CSV file containing the quotes, and the .sha file to track the most recent hash of the Python Clock's CSV (quotes.csv.sha is made by default if it doesn't exist, so you only need to add a valid filepath).
+1. In [update_clock.sh](/scripts/update_clock.sh), modify the `REPO_DIR` variable to store the path to the local repository's root directory.
 
 2. Add the script as a cron job:
 
     ```sh
-    sudo crontab -e
+    crontab -e
     ```
 
 3. Add the following in the file that opens (this will run the script at 04:00 every day):
 
     ```sh
-    0 4 * * * bash /path/to/clock/scripts/update_clock.sh
+    0 4 * * * bash /path/to/Lit-Clock-Cpp-Rewrite/scripts/update_clock.sh >> /home/user/update_clock.log 2>&1
     ```
 
-    - Don't forget to modify the path!
+    - Don't forget to modify the paths!
 
 ## Text Formatting
 
