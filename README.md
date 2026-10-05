@@ -100,7 +100,7 @@ There are two unit configuration files that build and run the clock when the Pi 
 
 1. In [update_clock.sh](/scripts/update_clock.sh), modify the `REPO_DIR` variable to store the path to the local repository's root directory.
 
-2. Add the script as a cron job:
+2. Open the cron table:
 
     ```sh
     crontab -e
