@@ -15,6 +15,8 @@
 #
 # Finally, the Pi is restarted.
 
+set -e # exit the script if a command fails at any point.
+
 REPO="alextaschuk/Literary-Quote-Clock"
 BRANCH="main"
 FILE="quotes.csv"
@@ -22,10 +24,7 @@ FILE="quotes.csv"
 DEST="/home/user/path/to/clock/share/quotes.csv" # Modify to point to the correct file
 SHA_FILE="/home/user/path/to/clock/share/quotes.csv.sha" # Modify to point to the correct file
 
-sudo systemctl stop CPP_clock.service
-
 git pull
-
 
 REMOTE_SHA=$(curl -s \
     "https://api.github.com/repos/$REPO/commits?path=$FILE&sha=$BRANCH&per_page=1" \
