@@ -19,7 +19,7 @@ set -euo pipefail # exit the script if a command fails at any point.
 
 echo "$(date): Begin C++ Clock's update script."
 
-REPO_DIR="/home/user/path/to/clock"  # Modify to point to the repo's root
+REPO_DIR="/home/user/path/to/Lit-Clock-Cpp-Rewrite"  # Modify to point to the repo's root
 DEST="$REPO_DIR/share/quotes.csv"
 SHA_FILE="$REPO_DIR/share/quotes.csv.sha"
 
