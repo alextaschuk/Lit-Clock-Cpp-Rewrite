@@ -3,7 +3,7 @@
 # To run this with a cron job once a day at 4:00 A.M., run
 # sudo crontab -e
 # Then, add the following in the file that opens:
-# 0 4 * * * bash /path/to/clock/scripts/update_clock.sh
+# 0 4 * * * bash /path/to/Lit-Clock-Cpp-Rewrite/scripts/update_clock.sh >> /home/user/update_clock.log 2>&1
 #
 # This script pulls changes from the remote repo's main branch.
 #
@@ -44,7 +44,10 @@ if [ "$REMOTE_SHA" != "$LOCAL_SHA" ]; then
     if curl -fL -o "$DEST" \
         "https://raw.githubusercontent.com/$PY_REPO/$BRANCH/$FILE"; then
 
+        echo "$(date): Updating delimiter characters in the CSV..."
         sed -i \
+            -e 's/\*/\\*/g' \
+            -e 's/\_/\\_/g' \
             -e 's/◻/_/g' \
             -e 's/◯/*/g' \
             -e 's/␤/\\n/g' \
