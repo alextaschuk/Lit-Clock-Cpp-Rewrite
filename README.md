@@ -222,7 +222,7 @@ A drawback to the quote-to-image program I originally wrote in Python is that wh
 The most significant improvement is how lines of text are vertically spaced apart. Pillow doesn't expose a TrueType font's linegap, so the spacing between two lines of text in my Python program is calculated with:
 
 ```Python
-v_dist = int(pen.font.getbbox("A")[3] + 4)
+linegap = int(pen.font.getbbox("A")[3] + 4)
 ```
 
 - For a more in-depth explanation about Pillow's reasoning for this workaround, read this [comment](https://github.com/python-pillow/Pillow/issues/6469#issuecomment-1203036583).
