@@ -1,9 +1,4 @@
-# The startup script for the clock.
-# This should go into /etc/systemd/system/
-
-# Don't forget to modify ExecStart
-# to point to the correct directory and file.
-
+# Startup script for the clock.
 [Unit]
 Description = C++ Book Quote Clock
 After=network-online.target CPP_clock_build.service
@@ -11,7 +6,7 @@ Requires=CPP_clock_build.service
 
 [Service]
 Type=simple
-ExecStart=/path/to/clock/build/binary
+ExecStart=__EXEC_START__
 KillSignal=SIGINT
 Restart=on-failure
 
