@@ -14,6 +14,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 1. [How to Set up the Clock](#how-to-set-up-the-clock)
     1. [Materials](#materials)
     2. [Setting up the Clock](#setting-up-the-clock)
+    3. [Additional Config/Setup Info](#additional-configsetup-info)
 
 2. [Text Formatting](#text-formatting)
     1. [_Italic Text_](#italic-_-u005f-low-lineunderscore)
@@ -58,7 +59,42 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 
         ![two examples of VCOM values printed on individual FPCs](https://www.waveshare.com/w/upload/f/f6/6inch-HD-e-Paper-HAT-Manual-06.png)
 
-    2. Whether or not (y/n) you want the credits of each quote (i.e., the title of the book it is from and the book's author) to be displayed under the quote. By default, this is enabled. It slightly reduces the size of the quote's text, but not by a significant amount.
+    2. Whether or not (y/n) you want the credits of each quote (i.e., the title of the book it is from and the book's author) to be displayed under the quote. By default, this is enabled. The amount of space a quote has on the screen is reduced, but not by a significant amount.
+
+### Additional Config/Setup Info
+
+#### Startup Scripts
+
+There are two .service scripts that are ran when the Pi is turned on: [CPP_clock_build.service](/scripts/CPP_clock_build.service) and [CPP_clock.service](/scripts/CPP_clock.service). CPP_clock_build builds the clock's binary, and CPP_clock runs the binary.
+
+- To view the top (start) of the clock's logs:
+
+    ```sh
+    journalctl -u CPP_clock.service
+    ```
+
+- To view the clock's most recent logs:
+
+    ```sh
+    journalctl -e -u clock.service
+    ```
+
+#### Automatic Update Script
+
+There is a cron job that runs [update_clock.sh](/scripts/update_clock.sh) daily at 04:00. It pulls any changes from the clock's remote repo and updates the CSV file containing all of the clock's quotes (since I only update the CSV for the Python clock.) 
+
+The update script's logs are stored at `Lit-Clock-Cpp-Rewrite/update_clock.log`.
+
+#### Other
+
+- [constants.hpp](/include/constants.hpp) has global variables that can be modified to make further changes for the clock (e.g., if you want to change the background color of the clock to black, set `BG_COLOR=0`).
+
+- To generate and save images of the quotes to an images/ directory, run the following from the clock's build/ directory:
+
+    ```sh
+    ./save_images
+    ```
+
 
 ## Text Formatting
 
