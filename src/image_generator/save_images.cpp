@@ -19,7 +19,8 @@ void Writer::saveImages()
         initFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), fonts.italicBoldBuf, fonts.italicBold);
         initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.creditBuf, fonts.credit);
     } catch (const std::runtime_error) {
-        spdlog::critical("Failed to initialize fonts.");
+        spdlog::critical("Failed to initialize fonts. Stopping image generation.");
+        return;
     }
 
     std::unordered_map<std::string, std::string> row = 
@@ -33,7 +34,7 @@ void Writer::saveImages()
 
     std::ifstream quoteFile(projectPath(QUOTES_PATH));
     if (!quoteFile.is_open()) {
-        spdlog::critical("Failed to open CSV file at {}.", QUOTES_PATH);
+        spdlog::critical("Failed to open CSV file at {}. Stopping image generation.", QUOTES_PATH);
         return;
     }
 
@@ -47,7 +48,8 @@ void Writer::saveImages()
     try { // make an images directory if one doesn't exist yet
         std::filesystem::create_directories(projectPath("images"));
     } catch (const std::filesystem::filesystem_error& e) {
-        spdlog::critical("Failed to make images/ directory");
+        spdlog::critical("Failed to make images/ directory. Stopping image generation.");
+        return;
     }
 
     while (std::getline(quoteFile, line))
@@ -93,7 +95,8 @@ void Writer::saveImages()
         } else if (IMAGE_FORMAT == "png") {
             stbi_write_png(filepath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, imgOut.data(), SCREEN_WIDTH);
         } else {
-            spdlog::error("{} is an invalid image type", IMAGE_FORMAT);
+            spdlog::error("{} is an invalid image type (must be \"png\" or \"bmp\"). Stopping image generation.", IMAGE_FORMAT);
+            return;
         }
 
         std::string progressBar = "Creating images... " + std::to_string(quoteCount);
