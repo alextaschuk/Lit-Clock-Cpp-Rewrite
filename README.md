@@ -1,6 +1,7 @@
 <h1 align="center">Literary Quote Clock Rewrite in C++</h1>
 
 This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschuk/Literary-Quote-Clock), which was originally written in Python. The clock is compatible with Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com/6inch-hd-e-paper-hat.htm) (though, it shouldn't be hard to modify it for other Waveshare EPDs). It has all of the Python clock's features and includes some improvements as well.
+- The frame for this clock is a WIP.
 
 <p align="center">
     <img src="share/examples/demo.png" alt="A quote from \"Dune\" by Frank Herbert for 12:00 that reads \"The man crawled across a dune top. He was a mote caught in the glare of the noon sun\"" height="400"/>
@@ -13,8 +14,6 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 1. [How to Set up the Clock](#how-to-set-up-the-clock)
     1. [Materials](#materials)
     2. [Setting up the Clock](#setting-up-the-clock)
-    3. [Startup Script Configuration](#startup-script-configuration)
-    4. [Enable Automatic Updates](#enable-automatic-updates)
 
 2. [Text Formatting](#text-formatting)
     1. [_Italic Text_](#italic-_-u005f-low-lineunderscore)
@@ -47,85 +46,19 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 
     - *Note*: If you forgot the `--recursive` flag, run `git submodule update --init` to clone the logging library locally.
 
-3. `cd` into the repository, then run the folowing to make a build folder and generate the project's build files:
+3. `cd` into the local repository, then run the clock's setup script:
 
     ```sh
-    mkdir build && cd build && cmake ..
+    bash scripts/setup_clock.sh
     ```
 
-4. From the project's root, download the CSV file containing all of the quotes from the Python Clock's remote repo in the share/ folder:
+- This script configures all of the necessary services to automatically run the clock when the Pi is turned on and have it automatically update. You will be prompted to enter two values:
 
-    ```sh
-    curl -fL -o share/quotes.csv "https://raw.githubusercontent.com/alextaschuk/Literary-Quote-Clock/main/quotes.csv"
-    ```
+    1. The VCOM value that is printed on your screen's FPC. Here is an example from Waveshare's wiki:
 
-5. Update the CSV to use the C++ Clock's formatting delimiters instead of the Python Clock's:
+        ![two examples of VCOM values printed on individual FPCs](https://www.waveshare.com/w/upload/f/f6/6inch-HD-e-Paper-HAT-Manual-06.png)
 
-    ```sh
-    sed -i \
-        -e 's/\*/\\*/g' \
-        -e 's/\_/\\_/g' \
-        -e 's/◻/_/g' \
-        -e 's/◯/*/g' \
-        -e 's/␤/\\n/g' \
-        -e 's/⇇/\\n\\n/g' \
-        share/quotes.csv
-    ```
-
-6. There are a couple of global variables that can be configured for the clock. They exist in [constants.hpp](/include/constants.hpp). There are two notable variables:
-
-- `VCOM`: This must match the VCOM value that's on the screen's FPC.
-- `INCLUDE_CREDITS`: Set to `true` (default) if you want the book title and author of a quote to be displayed under it, or `false` to only show the quote.
-
-
-### Startup Script Configuration
-
-There are two unit configuration files that build and run the clock when the Pi is started.
-
-1. In the [CPP_clock_build.service](scripts/CPP_clock_build.service) script, modify the `WorkingDirectory` variable to store the path to the build folder you just made.
-    - The script is ran once during the Pi's startup to compile the program.
-
-2. In the [CPP_clock.service](scripts/CPP_clock.service) script, modify the `ExecStart` variable to store the path to the `clock` binary in the build/ folder.
-    - This script starts the clock after CPP_clock_build.service has run.
-
-3. Move the scripts to /etc/systemd/system with:
-
-    ```sh
-    mv scripts/CPP_clock_build.service /etc/systemd/system/CPP_clock_build.service
-
-    mv scripts/CPP_clock.service /etc/systemd/system/CPP_clock.service
-    ```
-
-4. Reload the systemd manager so that it sees the new service files:
-
-    ```sh
-    sudo systemctl daemon-reload
-    ```
-
-5. Enable the scripts and start the clock:
-
-    ```sh
-    sudo systemctl enable --now CPP_clock_build.service
-    sudo systemctl enable --now CPP_clock.service
-    ```
-
-### Enable Automatic Updates
-
-1. In [update_clock.sh](/scripts/update_clock.sh), modify the `REPO_DIR` variable to store the path to the local repository's root directory.
-
-2. Open the cron table:
-
-    ```sh
-    crontab -e
-    ```
-
-3. Add the following in the file that opens (this will run the script at 04:00 every day):
-
-    ```sh
-    0 4 * * * bash /path/to/Lit-Clock-Cpp-Rewrite/scripts/update_clock.sh >> /home/user/update_clock.log 2>&1
-    ```
-
-    - Don't forget to modify the paths!
+    2. Whether or not (y/n) you want the credits of each quote (i.e., the title of the book it is from and the book's author) to be displayed under the quote. By default, this is enabled. It slightly reduces the size of the quote's text, but not by a significant amount.
 
 ## Text Formatting
 
