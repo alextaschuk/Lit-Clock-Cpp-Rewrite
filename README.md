@@ -7,6 +7,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
     <img src="share/examples/demo.png" alt="A quote from \"Dune\" by Frank Herbert for 12:00 that reads \"The man crawled across a dune top. He was a mote caught in the glare of the noon sun\"" height="400"/>
 </p>
 
+
 ## Table of Contents
 <details>
 <summary>Click to View</summary>
@@ -27,6 +28,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
     1. [Improved Vertical Text Spacing](#improved-vertical-text-spacing)
 
 </details>
+
 
 ## How to Set up the Clock
 
@@ -65,7 +67,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 
 #### Startup Scripts
 
-There are two .service scripts that are ran when the Pi is turned on: [CPP_clock_build.service](/scripts/CPP_clock_build.service) and [CPP_clock.service](/scripts/CPP_clock.service). CPP_clock_build builds the clock's binary, and CPP_clock runs the binary.
+There are two .service scripts that are ran when the Pi is turned on: [CPP_clock_build.service](/scripts/CPP_clock_build.service) (builds the clock's binary) and [CPP_clock.service](/scripts/CPP_clock.service) (runs the binary).
 
 - To view the top (start) of the clock's logs:
 
@@ -79,7 +81,7 @@ There are two .service scripts that are ran when the Pi is turned on: [CPP_clock
     journalctl -e -u clock.service
     ```
 
-#### Automatic Update Script
+#### Automatic Updates Script
 
 There is a cron job that runs [update_clock.sh](/scripts/update_clock.sh) daily at 04:00. It pulls any changes from the clock's remote repo and updates the CSV file containing all of the clock's quotes (since I only update the CSV for the Python clock.) 
 

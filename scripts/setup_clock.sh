@@ -50,11 +50,9 @@ read -r -p "Include the credits (book title & author) under each quote? [Y/n]: "
 case "$CREDITS_INPUT" in
     [nN]|[nN][oO])
         INCLUDE_CREDITS=false
-        echo "Quote credits will not be displayed under each quote."
         ;;
     *)
         INCLUDE_CREDITS=true
-        echo "Quote credits will be displayed under each quote."
         ;;
 esac
 
@@ -68,7 +66,7 @@ sed -i -E \
     "$CONSTANTS_FILE"
 
 echo "Updated constants.hpp:"
-grep -E 'inline constexpr (double VCOM|bool INCLUDE_CREDITS)' "$CONSTANTS_FILE"
+grep -E '\tinline constexpr (double VCOM|bool INCLUDE_CREDITS)' "$CONSTANTS_FILE"
 
 ##################################################
 # Generate the Clock's Build Files
@@ -103,7 +101,7 @@ trap - EXIT
 # Update the service files to use the necessary
 # paths and install them in the systemd manager
 ##################################################
-echo "Configuring the start scripts..."
+echo "Configuring the startup services..."
 if [[ ! -f "$BUILD_SERVICE" || ! -f "$CLOCK_SERVICE" ]]; then
     echo "Error: Service files not found in $SCRIPTS_DIR."
     exit 1
@@ -127,7 +125,7 @@ sudo systemctl daemon-reload
 ##################################################
 # Start the clock
 ##################################################
-echo "Enabling clock services and starting the clock..."
+echo "Enabling clock services and starting the clock (this may take a minute)..."
 sudo systemctl enable --now CPP_clock_build.service
 sudo systemctl enable --now CPP_clock.service
 
@@ -148,7 +146,6 @@ LOG_FILE="$ROOT/update_clock.log"
 CRON_JOB="0 4 * * * bash $UPDATE_SCRIPT >> $LOG_FILE 2>&1"
 CURRENT_CRONTAB="$(crontab -l 2>/dev/null || true)"
 
-echo "Setting the update script's path to the local repo's root..."
 sed -i "s|^REPO_DIR=\"__REPO_DIR__\"$|REPO_DIR=\"$ROOT\"|" "$UPDATE_SCRIPT"
 
 if printf '%s\n' "$CURRENT_CRONTAB" | grep -Fq "$UPDATE_SCRIPT"; then
