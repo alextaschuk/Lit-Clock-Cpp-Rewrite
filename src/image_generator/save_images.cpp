@@ -3,8 +3,8 @@
 #include <chrono>
 #include <filesystem>
 #include <iostream>
-#include <print>
 
+#include "spdlog/spdlog.h"
 #include "stb/stb_image_write.h"
 
 #include "constants.hpp"
@@ -19,7 +19,7 @@ void Writer::saveImages()
         initFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), fonts.italicBoldBuf, fonts.italicBold);
         initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.creditBuf, fonts.credit);
     } catch (const std::runtime_error) {
-        std::println("Error: Failed to initialize fonts.");
+        spdlog::critical("Failed to initialize fonts.");
     }
 
     std::unordered_map<std::string, std::string> row = 
@@ -33,7 +33,7 @@ void Writer::saveImages()
 
     std::ifstream quoteFile(projectPath(QUOTES_PATH));
     if (!quoteFile.is_open()) {
-        std::println("Error: Failed to open quotes file.");
+        spdlog::critical("Failed to open CSV file at {}.", QUOTES_PATH);
         return;
     }
 
@@ -47,7 +47,7 @@ void Writer::saveImages()
     try { // make an images directory if one doesn't exist yet
         std::filesystem::create_directories(projectPath("images"));
     } catch (const std::filesystem::filesystem_error& e) {
-        std::println("Error: Failed to make images/ directory");
+        spdlog::critical("Failed to make images/ directory");
     }
 
     while (std::getline(quoteFile, line))
@@ -55,7 +55,7 @@ void Writer::saveImages()
         quoteCount++;
         std::vector<std::string> splitRow = split(line, '|');
         if (splitRow.size() != 5) {
-            std::println("Error: Row {} is missing a column.", quoteCount + 1);
+            spdlog::warn("Row {} was skipped because it is missing a column.", quoteCount + 1);
             continue;
         }
 
@@ -76,7 +76,7 @@ void Writer::saveImages()
             {
                 int missingMin = prevMin + 1;
                 std::string missingTime = std::format("{}{:02}", previousTime.substr(0, 2), missingMin);
-                std::println("Error: Missing or out-of-order quote for {}", missingTime);
+                spdlog::warn("Missing or out-of-order quote (expected {}, got {}", missingTime, currTime);
             }
 
             imgNum = 0;
@@ -93,7 +93,7 @@ void Writer::saveImages()
         } else if (IMAGE_FORMAT == "png") {
             stbi_write_png(filepath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, imgOut.data(), SCREEN_WIDTH);
         } else {
-            std::println("Error: {} is an invalid image type", IMAGE_FORMAT);
+            spdlog::error("{} is an invalid image type", IMAGE_FORMAT);
         }
 
         std::string progressBar = "Creating images... " + std::to_string(quoteCount);
