@@ -4,7 +4,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 - The frame for this clock is a WIP.
 
 <p align="center">
-    <img src="share/examples/demo.png" alt="A quote from \"Dune\" by Frank Herbert for 12:00 that reads \"The man crawled across a dune top. He was a mote caught in the glare of the noon sun\"" height="400"/>
+    <img src="share/examples/demo.png" alt="A quote from \"Dune\" by Frank Herbert for 12:00 that reads \"The man crawled across a dune top. He was a mote caught in the glare of the noon sun\"" height="300"/>
 </p>
 
 
