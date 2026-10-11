@@ -28,10 +28,11 @@ if [[ ! -f "$ROOT/CMakeLists.txt" ]]; then
     echo "Error: This script must be ran from the clock's root directory (Lit-Clock-Cpp-Rewrite/)."
     exit 1
 fi
-if [[ ! -f "$CONSTANTS_FILE" ]]; then
-    echo "Error: constants.hpp not found at $CONSTANTS_FILE"
-    exit 1
-fi
+
+echo "┌──────────────────────────┐"
+echo "│Literary Quote Clock Setup│"
+echo "└———————————————————————──—┘"
+printf "This script configures all of the necessary services to automatically run the clock when the Pi is turned on and have it automatically update.\r\n"
 
 ##################################################
 # Get VCOM and INCLUDE_CREDITS values from user
@@ -71,14 +72,14 @@ grep -E '\tinline constexpr (double VCOM|bool INCLUDE_CREDITS)' "$CONSTANTS_FILE
 ##################################################
 # Generate the Clock's Build Files
 ##################################################
-echo "Generating build files..."
+printf "\r\nGenerating build files..."
 cmake -S "$ROOT" -B "$BUILD_DIR"
 
 ##################################################
 # Download the Quotes CSV and convert the text
 # formatting delimiters
 ##################################################
-echo "Downloading quotes.csv from the Python Clock's remote repo..."
+printf "\r\nDownloading quotes.csv from the Python Clock's remote repo..."
 TEMP_CSV="$(mktemp "$SHARE_DIR/quotes.csv.tmp.XXXXXX")"
 trap 'rm -f "$TEMP_CSV"' EXIT
 
@@ -101,7 +102,7 @@ trap - EXIT
 # Update the service files to use the necessary
 # paths and install them in the systemd manager
 ##################################################
-echo "Configuring the startup services..."
+printf "\r\nConfiguring the startup services..."
 if [[ ! -f "$BUILD_SERVICE" || ! -f "$CLOCK_SERVICE" ]]; then
     echo "Error: Service files not found in $SCRIPTS_DIR."
     exit 1
@@ -125,14 +126,14 @@ sudo systemctl daemon-reload
 ##################################################
 # Start the clock
 ##################################################
-echo "Enabling clock services and starting the clock (this may take a minute)..."
+printf "\r\nEnabling clock services and starting the clock (this may take a minute)..."
 sudo systemctl enable --now CPP_clock_build.service
 sudo systemctl enable --now CPP_clock.service
 
 ##################################################
 # Enable automatic updates
 ##################################################
-echo "Configuring the clock's auto-update script..."
+printf "\r\nConfiguring the clock's auto-update script..."
 
 # Add the update script to the user's cron table
 UPDATE_SCRIPT="$SCRIPTS_DIR/update_clock.sh"
