@@ -33,12 +33,10 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 ## How to Set up the Clock
 
 ### Materials
-
 - [Waveshare 6-inch E-ink Display & HAT](https://www.waveshare.com/6inch-hd-e-paper-hat.htm)
 - [Raspberry Pi](https://www.raspberrypi.com/products/)
 
 ### Setting up the Clock
-
 1. Complete steps 1 and 2 on the [Working with Raspberry Pi (SPI)](https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#Working_with_Raspberry_Pi_.28SPI.29) section on Waveshare's wiki page.
 
 2. Clone this repository recursively onto the Pi (necessary to enable logger functions via spdlog) with:
@@ -49,24 +47,15 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 
     - *Note*: If you forgot the `--recursive` flag, run `git submodule update --init` to clone the logging library locally.
 
-3. `cd` into the local repository, then run the clock's setup script:
+3. `cd` into Lit-Clock-Cpp-Rewrite/, then run the clock's setup script:
 
     ```sh
-    bash scripts/setup_clock.sh
+    bash scripts/install_clock.sh
     ```
-
-- This script configures all of the necessary services to automatically run the clock when the Pi is turned on and have it automatically update. You will be prompted to enter two values:
-
-    1. The VCOM value that is printed on your screen's FPC. Here is an example from Waveshare's wiki:
-
-        ![two examples of VCOM values printed on individual FPCs](https://www.waveshare.com/w/upload/f/f6/6inch-HD-e-Paper-HAT-Manual-06.png)
-
-    2. Whether or not (y/n) you want the credits of each quote (i.e., the title of the book it is from and the book's author) to be displayed under the quote. By default, this is enabled. The amount of space a quote has on the screen is reduced, but not by a significant amount.
 
 ### Additional Config/Setup Info
 
 #### Startup Scripts
-
 There are two .service scripts that are ran when the Pi is turned on: [CPP_clock_build.service](/scripts/CPP_clock_build.service) (builds the clock's binary) and [CPP_clock.service](/scripts/CPP_clock.service) (runs the binary).
 
 - To view the top (start) of the clock's logs:
@@ -82,13 +71,11 @@ There are two .service scripts that are ran when the Pi is turned on: [CPP_clock
     ```
 
 #### Automatic Updates Script
-
 There is a cron job that runs [update_clock.sh](/scripts/update_clock.sh) daily at 04:00. It pulls any changes from the clock's remote repo and updates the CSV file containing all of the clock's quotes (since I only update the CSV for the Python clock.) 
 
 The update script's logs are stored at `Lit-Clock-Cpp-Rewrite/update_clock.log`.
 
 #### Other
-
 - [constants.hpp](/include/constants.hpp) has global variables that can be modified to make further changes for the clock (e.g., if you want to change the background color of the clock to black, set `BG_COLOR=0`).
 
 - To generate and save images of the quotes to an images/ directory, run the following from the clock's build/ directory:
