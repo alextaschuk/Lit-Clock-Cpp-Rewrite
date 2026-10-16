@@ -32,7 +32,7 @@ fi
 echo "┌──────────────────────────┐"
 echo "│Literary Quote Clock Setup│"
 echo "└———————————————————————──—┘"
-printf "This script configures all of the necessary services to automatically run the clock when the Pi is turned on and have it automatically update.\r\n"
+printf "This script configures all of the necessary services to automatically run the clock when the Pi is turned on and have it automatically update (e.g. receive new quotes).\r\n"
 
 ##################################################
 # Get VCOM and INCLUDE_CREDITS values from user
@@ -67,7 +67,7 @@ sed -i -E \
     "$CONSTANTS_FILE"
 
 echo "Updated constants.hpp:"
-grep -E '\tinline constexpr (double VCOM|bool INCLUDE_CREDITS)' "$CONSTANTS_FILE"
+grep -E '^[[:space:]]*inline constexpr (double VCOM|bool INCLUDE_CREDITS)' "$CONSTANTS_FILE"
 
 ##################################################
 # Generate the Clock's Build Files
