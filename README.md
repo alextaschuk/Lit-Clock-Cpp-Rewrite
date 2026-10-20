@@ -1,10 +1,10 @@
-<h1 align="center">C++ Literary Quote Clock Rewrite</h1>
+<h1 align="center">Literary Quote Clock (C++ Rewrite)</h1>
 
 <p align="center">
     <img src="share/examples/demo.png" alt="A quote from \"Dune\" by Frank Herbert for 12:00 that reads \"The man crawled across a dune top. He was a mote caught in the glare of the noon sun\"" height="300"/>
 </p>
 
-This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschuk/Literary-Quote-Clock), which was originally written in Python. The clock is compatible with Waveshare's [6-inch IT8951 EPD](https://www.waveshare.com/6inch-hd-e-paper-hat.htm) (though, it shouldn't be hard to modify it for other Waveshare EPDs). It has all of the Python clock's features and includes some improvements as well.
+This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschuk/Literary-Quote-Clock), which was originally written in Python. The clock is compatible with Waveshare's [6-inch e-paper display](https://www.waveshare.com/6inch-hd-e-paper-hat.htm) (though, it shouldn't be hard to modify it for other Waveshare EPDs). It has all of the Python clock's features and includes some improvements as well.
 - The frame for this clock is a WIP.
 
 ## Table of Contents
@@ -33,9 +33,10 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 
 ### Materials
 - [Waveshare 6-inch E-ink Display & HAT](https://www.waveshare.com/6inch-hd-e-paper-hat.htm)
-- [Raspberry Pi](https://www.raspberrypi.com/products/)
+- [Raspberry Pi](https://www.raspberrypi.com/products/) (I personally used an RPi 3B)
 
 ### Setting up the Clock
+
 1. Complete steps 1 and 2 on the [Working with Raspberry Pi (SPI)](https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#Working_with_Raspberry_Pi_.28SPI.29) section of Waveshare's wiki page.
 
 
@@ -47,9 +48,19 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 
     - *Note*: If you forgot the `--recursive` flag, run `git submodule update --init` to clone the logging library locally.
 
-3. (Optional) If the clock is being installed on a Raspberry Pi 5, install the lg library to Lit-Clock-Cpp-Rewrite/extern/ by following step 3 on the [Working with Raspberry Pi (SPI)](https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#Working_with_Raspberry_Pi_.28SPI.29) section of Waveshare's wiki page. Then, delete the bcm2835/ directory from Lit-Clock-Cpp-Rewrite/extern/.
+3. `cd` into the clock's root:
 
-4. `cd` into Lit-Clock-Cpp-Rewrite/, then run the clock's setup script:
+    ```sh
+    cd Lit-Clock-Cpp-Rewrite/
+    ```
+
+4. (Optional) If the clock is being installed on a Raspberry Pi 5, install the lg library to _Lit-Clock-Cpp-Rewrite/extern/_ by following step 3 on the [Working with Raspberry Pi (SPI)](https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#Working_with_Raspberry_Pi_.28SPI.29) section of Waveshare's wiki page. Then, delete the _bcm2835/_ library:
+
+    ```sh
+    rm -rf extern/bcm2835
+    ```
+
+5. Run the clock's setup script:
 
     ```sh
     bash scripts/install_clock.sh
@@ -80,7 +91,7 @@ The update script's logs are stored at `Lit-Clock-Cpp-Rewrite/update_clock.log`.
 #### Other
 - [constants.hpp](/include/constants.hpp) has global variables that can be modified to make further changes for the clock (e.g., if you want to change the background color of the clock to black, set `BG_COLOR=0`).
 
-- To generate and save images of the quotes to an images/ directory, run the following from the clock's build/ directory:
+- To generate and save images of the quotes to an _images/_ directory, run the following from the clock's _build/_ directory:
 
     ```sh
     ./save_images
@@ -132,7 +143,6 @@ Here's an example:
 <p align="center">
     <img src="share/examples/italic-bold-formatting.png" height="400"/>
 </p>
-
 
 ### Move Text to a New Line `\n` (U+000A, End of Line)
 
