@@ -43,7 +43,6 @@ install_bcm2835() {
 
             wget -q --show-progress -O "$download_dir/$archive" "$download_url"
             tar -xzf "$download_dir/$archive" -C "$lib_dir" --strip-components=1
-            mv "$download_dir/bcm2835-${version}" "$lib_dir"
         ) || { echo "Failed to download bcm2835." >&2; return 1; }
     fi
 
