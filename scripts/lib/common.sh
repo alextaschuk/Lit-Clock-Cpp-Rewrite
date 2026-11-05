@@ -37,7 +37,7 @@ check_environment() {
 
     # verify the files that are read/written to during install exist
     local required_file
-    for required_file in "$BUILD_SERVICE" "$CLOCK_SERVICE" "$UPDATE_SERVICE" "$UPDATE_SCRIPT" "$CMAKE_FILE"; do
+    for required_file in "$BUILD_SERVICE" "$CLOCK_SERVICE" "$UPDATE_SCRIPT" "$CMAKE_FILE"; do
         if [[ ! -f "$required_file" ]]; then
             error "$required_file is missing."
             exit 1
