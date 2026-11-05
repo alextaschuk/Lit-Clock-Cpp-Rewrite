@@ -30,7 +30,7 @@ install_bcm2835() {
     if [[ -x "$lib_dir/configure" ]]; then
         echo "Using existing bcm2835 source in $lib_dir"
     else
-        echo "Downloading bcm2835 ${version}... to ${lib_dir}"
+        echo "Downloading bcm2835 ${version} to ${lib_dir}"
 
         download_dir="$(mktemp -d "${lib_dir}-download.XXXXXX")" || return 1
 
@@ -38,9 +38,10 @@ install_bcm2835() {
             set -e
             trap 'rm -rf "$download_dir"' EXIT
 
+            rm -rf "${lib_dir:?}"
+            mkdir -p "$lib_dir"
+
             wget -q --show-progress -O "$download_dir/$archive" "$download_url"
-            
-            rm -rf "${lib_dir:?}/"*
             tar -xzf "$download_dir/$archive" -C "$lib_dir" --strip-components=1
             mv "$download_dir/bcm2835-${version}" "$lib_dir"
         ) || { echo "Failed to download bcm2835." >&2; return 1; }
