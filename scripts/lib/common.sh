@@ -17,7 +17,6 @@ CMAKE_FILE="$ROOT/CMakeLists.txt"
 # Script and service files
 BUILD_SERVICE="$SCRIPTS_DIR/systemd/CPP_clock_build.service"
 CLOCK_SERVICE="$SCRIPTS_DIR/systemd/CPP_clock.service"
-UPDATE_SERVICE="$SCRIPTS_DIR/systemd/update_clock.service"
 UPDATE_SCRIPT="$SCRIPTS_DIR/update_clock.sh"
 
 # Other files
