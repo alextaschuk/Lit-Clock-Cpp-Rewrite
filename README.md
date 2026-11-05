@@ -13,7 +13,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 
 1. [How to Set up the Clock](#how-to-set-up-the-clock)
     1. [Materials](#materials)
-    2. [Setting up the Clock](#setting-up-the-clock)
+    2. [How to Install the Clock](#how-to-install-the-clock)
     3. [Additional Config/Setup Info](#additional-configsetup-info)
 
 2. [Text Formatting](#text-formatting)
@@ -32,13 +32,11 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 ## How to Set up the Clock
 
 ### Materials
+- [Raspberry Pi](https://www.raspberrypi.com/products/)
 - [Waveshare 6-inch E-ink Display & HAT](https://www.waveshare.com/6inch-hd-e-paper-hat.htm)
-- [Raspberry Pi](https://www.raspberrypi.com/products/) (I personally used an RPi 3B)
 
-### Setting up the Clock
-
-1. Complete steps 1 and 2 on the [Working with Raspberry Pi (SPI)](https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#Working_with_Raspberry_Pi_.28SPI.29) section of Waveshare's wiki page.
-
+### How to Install the Clock
+1. Complete steps 1 and 2 on the [Working with Raspberry Pi (SPI)](https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#Working_with_Raspberry_Pi_.28SPI.29) section of Waveshare's wiki page (ensure the screen is properly connected to the Pi, and set the DIP switch to SPI mode on the IT8951 Driver HAT).
 
 2. Clone this repository recursively onto the Pi (necessary to enable logger functions via spdlog) with:
 
@@ -48,19 +46,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 
     - *Note*: If you forgot the `--recursive` flag, run `git submodule update --init` to clone the logging library locally.
 
-3. `cd` into the clock's root:
-
-    ```sh
-    cd Lit-Clock-Cpp-Rewrite/
-    ```
-
-4. (Optional) If the clock is being installed on a Raspberry Pi 5, install the lg library to _Lit-Clock-Cpp-Rewrite/extern/_ by following step 3 on the [Working with Raspberry Pi (SPI)](https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#Working_with_Raspberry_Pi_.28SPI.29) section of Waveshare's wiki page. Then, delete the _bcm2835/_ library:
-
-    ```sh
-    rm -rf extern/bcm2835
-    ```
-
-5. Run the clock's setup script:
+3. Run the clock's install script (either from the Clock's root directory, or include the entire path to the install script):
 
     ```sh
     bash scripts/install_clock.sh
@@ -68,8 +54,8 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 
 ### Additional Config/Setup Info
 
-#### Startup Scripts
-There are two .service scripts that are ran when the Pi is turned on: [CPP_clock_build.service](/scripts/CPP_clock_build.service) (builds the clock's binary) and [CPP_clock.service](/scripts/CPP_clock.service) (runs the binary).
+#### Boot-Time Startup Scripts
+The clock uses two service scripts to start when the Pi is powered on (or reset): [`CPP_clock_build.service`](/scripts/CPP_clock_build.service) builds the clock's binary (in the event of any updates) and [`CPP_clock.service`](/scripts/CPP_clock.service) runs the binary.
 
 - To view the top (start) of the clock's logs:
 
@@ -80,18 +66,18 @@ There are two .service scripts that are ran when the Pi is turned on: [CPP_clock
 - To view the clock's most recent logs:
 
     ```sh
-    journalctl -e -u clock.service
+    journalctl -e -u CPP_clock.service
     ```
 
 #### Automatic Updates Script
-There is a cron job that runs [update_clock.sh](/scripts/update_clock.sh) daily at 04:00. It pulls any changes from the clock's remote repo and updates the CSV file containing all of the clock's quotes (since I only update the CSV for the Python clock.) 
+A cron job runs an update script daily at 04:00. It pulls any changes from the clock's remote repo and updates the CSV file containing all of the clock's quotes when necessary (since I only update the CSV for the Python clock.) 
 
 The update script's logs are stored at `Lit-Clock-Cpp-Rewrite/update_clock.log`.
 
 #### Other
 - [constants.hpp](/include/constants.hpp) has global variables that can be modified to make further changes for the clock (e.g., if you want to change the background color of the clock to black, set `BG_COLOR=0`).
 
-- To generate and save images of the quotes to an _images/_ directory, run the following from the clock's _build/_ directory:
+- To generate and save images of the quotes to an `images/` directory, run the following from the clock's `build/` directory (this is useful for debugging and previewing images):
 
     ```sh
     ./save_images
