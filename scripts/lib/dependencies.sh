@@ -20,17 +20,17 @@ install_bcm2835() {
     local lib_dir="$EXTERN_DIR/bcm2835"
 
     if [[ -f /usr/local/include/bcm2835.h ]]; then
-        echo "bcm2835 is already installed at $lib_dir"
+        echo "bcm2835 is already installed at /usr/local/."
         return 0
     fi
 
     mkdir -p "$EXTERN_DIR" || return 1
 
     # skip download if bcm2835 is already present
-    if [[ -f "$lib_dir/src/bcm2835.c" ]]; then
+    if [[ -x "$lib_dir/configure" ]]; then
         echo "Using existing bcm2835 source in $lib_dir"
     else
-        echo "Downloading bcm2835 ${version}..."
+        echo "Downloading bcm2835 ${version}... to ${lib_dir}"
 
         download_dir="$(mktemp -d "${lib_dir}-download.XXXXXX")" || return 1
 
@@ -38,8 +38,9 @@ install_bcm2835() {
             set -e
             trap 'rm -rf "$download_dir"' EXIT
             wget -q --show-progress -O "$download_dir/$archive" "$download_url"
+            rm -rf "${lib_dir:?}/"*
             tar -xzf "$download_dir/$archive" -C "$download_dir"
-            mv "$download_dir/bcm2835-${version}" "$EXTERN_DIR/bcm2835"
+            mv "$download_dir/bcm2835-${version}" "$lib_dir"
         ) || { echo "Failed to download bcm2835." >&2; return 1; }
     fi
 
