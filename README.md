@@ -38,7 +38,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 ### How to Install the Clock
 1. Complete steps 1 and 2 on the [Working with Raspberry Pi (SPI)](https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#Working_with_Raspberry_Pi_.28SPI.29) section of Waveshare's wiki page (ensure the screen is properly connected to the Pi, and set the DIP switch to SPI mode on the IT8951 Driver HAT).
 
-2. Clone this repository recursively onto the Pi (necessary to enable logger functions via spdlog) with:
+2. Clone this repository recursively onto the Pi (necessary to enable logger functions via spdlog):
 
     ```sh
     git clone --recursive https://github.com/alextaschuk/Lit-Clock-Cpp-Rewrite.git
@@ -55,7 +55,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 ### Additional Config/Setup Info
 
 #### Boot-Time Startup Scripts
-The clock uses two service scripts to start when the Pi is powered on (or reset): [`CPP_clock_build.service`](/scripts/CPP_clock_build.service) builds the clock's binary (in the event of any updates) and [`CPP_clock.service`](/scripts/CPP_clock.service) runs the binary.
+The clock uses two service scripts to start when the Pi is powered on (or reset): [`CPP_clock_build.service`](/scripts/CPP_clock_build.service) (re)builds the clock's binary (in the event of any updates), and [`CPP_clock.service`](/scripts/CPP_clock.service) runs the binary.
 
 - To view the top (start) of the clock's logs:
 
@@ -70,14 +70,54 @@ The clock uses two service scripts to start when the Pi is powered on (or reset)
     ```
 
 #### Automatic Updates Script
-A cron job runs an update script daily at 04:00. It pulls any changes from the clock's remote repo and updates the CSV file containing all of the clock's quotes when necessary (since I only update the CSV for the Python clock.) 
+A cron job runs an update script daily at 04:00. It pulls any changes from the clock's remote repo and updates the CSV file containing all of the clock's quotes when necessary (which is stored in the Python Clock's repo.) 
 
-The update script's logs are stored at `Lit-Clock-Cpp-Rewrite/update_clock.log`.
+The update script's logs are stored at `Lit-Clock-Cpp-Rewrite/update_clock.log`.'
+
+#### Create a Build File Manually. 
+
+There are two build types that the clock and image generation programs can be built with: `Debug` and `Release`. To create a build, run one (or both) of the following from the project's root directory:
+
+- _Note_:
+    - If you are building on an RPi 4 or below, replace the `-DGPIO_BACKEND=GPIO_LIB` flag to 
+    `-DGPIO_BACKEND=BCM2835`. 
+    - If you are building on a RPi 5 or above, change the `-DGPIO_BACKEND=GPIO_LIB` flag to `-DGPIO_BACKEND=LGPIO`.
+
+- _Note_: Configuring a build without `-DCMAKE_BUILD_TYPE` will default the build to `Debug`.
+
+- To create a debug build:
+
+    ```sh
+    cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DGPIO_BACKEND=GPIO_LIB
+    cmake --build build-debug
+    ```
+
+- To create a release build:
+    
+    ```sh
+    cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DGPIO_BACKEND=GPIO_LIB
+    cmake --build build-release
+    ```
+
+The clock and image generation programs have their own binary files.
+
+- To run the clock's binary:
+
+    ```sh
+    ./clock
+    ```
+
+- To run the image generation's binary (saves images to an `images/` folder): 
+
+    ```sh
+    ./save_images
+    ```
+
 
 #### Other
-- [constants.hpp](/include/constants.hpp) has global variables that can be modified to make further changes for the clock (e.g., if you want to change the background color of the clock to black, set `BG_COLOR=0`).
+- [`constants.hpp`](/include/constants.hpp) has global variables that can be modified to make further changes for the clock (e.g., if you want to change the background color of the clock to black, set `BG_COLOR=0`).
 
-- To generate and save images of the quotes to an `images/` directory, run the following from the clock's `build/` directory (this is useful for debugging and previewing images):
+- To generate and save images of the quotes to an `images/` directory, run the following from the clock's `build/` directory (useful for debugging and previewing images):
 
     ```sh
     ./save_images
@@ -183,7 +223,7 @@ linegap = int(pen.font.getbbox("A")[3] + 4)
 
 - For a more in-depth explanation about Pillow's reasoning for this workaround, read this [comment](https://github.com/python-pillow/Pillow/issues/6469#issuecomment-1203036583).
 
-Since stb_truetype.h _does_ expose a TT font's linegap, it is much easier to calculate the font's intended vertical spacing between lines of text (scaled for px units):
+Since `stb_truetype.h` _does_ expose a TT font's linegap, it is much easier to calculate the font's intended vertical spacing between lines of text (scaled for px units):
 
 ```C++
 int getLineHeight(const stbtt_fontinfo& font, const float& fontScale)

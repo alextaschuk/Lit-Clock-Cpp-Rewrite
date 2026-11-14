@@ -5,12 +5,11 @@
 
 
 ##################################################
-# Update VCOM value in constants.hpp from user
-# input.
+# Set VCOM value in constants.hpp from user input.
 ##################################################
-update_VCOM() {
+set_VCOM() {
     if ! grep -qE '^[[:space:]]*inline constexpr double VCOM' "$CONSTANTS_FILE"; then
-        echo "Error: VCOM declaration not found in constants.hpp." >&2
+        error "VCOM declaration not found in constants.hpp." >&2
         return 1
     fi
 
@@ -19,19 +18,19 @@ update_VCOM() {
     "$CONSTANTS_FILE"
 
     grep -Eq "VCOM[[:space:]]*=[[:space:]]*${VCOM};" "$CONSTANTS_FILE" \
-    || { echo "Error: failed to set VCOM in constants.hpp"; exit 1; }
+    || { error "Failed to set VCOM in constants.hpp"; exit 1; }
 
-    echo "Updated VCOM value in constants.hpp to $VCOM."
+    echo "Set VCOM value in constants.hpp to $VCOM."
 }
 
 
 ##################################################
-# Update INCLUDE_CREDITS value in constants.hpp
-# from user input.
+# Set INCLUDE_CREDITS value in constants.hpp from
+# user input.
 ##################################################
-update_INCLUDE_CREDITS() {
+set_INCLUDE_CREDITS() {
     if ! grep -qE '^[[:space:]]*inline constexpr bool INCLUDE_CREDITS' "$CONSTANTS_FILE"; then
-        echo "Error: INCLUDE_CREDITS declaration not found in constants.hpp." >&2
+        error "INCLUDE_CREDITS declaration not found in constants.hpp." >&2
         return 1
     fi
 
@@ -40,9 +39,9 @@ update_INCLUDE_CREDITS() {
     "$CONSTANTS_FILE"
 
     grep -Eq "INCLUDE_CREDITS[[:space:]]*=[[:space:]]*${INCLUDE_CREDITS};" "$CONSTANTS_FILE" \
-    || { echo "Error: failed to set INCLUDE_CREDITS in constants.hpp"; exit 1; }
+    || { error "Failed to set INCLUDE_CREDITS in constants.hpp"; exit 1; }
 
-    echo "Updated INCLUDE_CREDITS value in constants.hpp to $INCLUDE_CREDITS."
+    echo "Set INCLUDE_CREDITS value in constants.hpp to $INCLUDE_CREDITS."
 }
 
 
@@ -50,9 +49,8 @@ update_INCLUDE_CREDITS() {
 # Update constants.hpp variables with user input.
 ##################################################
 update_constants() {
-    echo "updating constants.hpp..."
-    update_VCOM
-    update_INCLUDE_CREDITS
+    set_VCOM
+    set_INCLUDE_CREDITS
 }
 
 ##################################################
@@ -68,7 +66,7 @@ generate_build_files() {
         *) error "Invalid Raspberry Pi model selection: $MODEL_SELECTION" ;;
     esac
 
-    cmake -S "$ROOT" -B "$BUILD_DIR" -DGPIO_BACKEND="$gpio_backend"
+    cmake -S "$ROOT" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -DGPIO_BACKEND="$gpio_backend"
 }
 
 
@@ -78,6 +76,7 @@ generate_build_files() {
 # Should be called in install_clock.sh.
 ################################################## 
 configure_clock() {
+    echo ""
     echo "Configuring the clock..."
 
     update_constants

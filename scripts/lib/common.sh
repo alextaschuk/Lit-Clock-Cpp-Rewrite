@@ -6,7 +6,7 @@
 
 
 # Project Directories
-BUILD_DIR="$ROOT/build"
+BUILD_DIR="$ROOT/build-release"
 SHARE_DIR="$ROOT/share"
 SCRIPTS_DIR="$ROOT/scripts"
 
