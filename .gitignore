@@ -1,11 +1,10 @@
-build/
-build-gcc/
+build-debug/
+build-release/
 images/
+waveshare/
 
 share/quotes.csv
 
 .DS_Store
-
-.vscode
 .cache
-waveshare/
+.vscode
