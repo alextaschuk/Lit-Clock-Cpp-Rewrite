@@ -19,11 +19,11 @@ set -euo pipefail # exit the script if a command fails at any point.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)" # script must be at the top of the scripts/ dir
 
-# Project Files
-SHA_FILE="$SHARE_DIR/quotes.csv.sha"
-
 source "$SCRIPT_DIR/lib/common.sh"
 source "$SCRIPT_DIR/lib/quotes.sh"
+
+# Project Files
+SHA_FILE="$SHARE_DIR/quotes.csv.sha"
 
 echo "┌───────────────────────────────────────┐"
 echo "$(date): Begin C++ Clock's update script."
