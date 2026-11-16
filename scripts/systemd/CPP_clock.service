@@ -7,7 +7,7 @@ Wants=network-online.target CPP_clock_build.service
 
 [Service]
 Type=simple
-ExecStartPre=-/bin/bash __TIME_SYNC_SCRIPT__
+ExecStartPre=-/bin/bash __SYNC_TIME_SCRIPT__
 ExecStart=__EXEC_START__
 KillSignal=SIGINT
 Restart=on-failure

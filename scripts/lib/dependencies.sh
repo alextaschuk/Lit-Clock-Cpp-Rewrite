@@ -40,7 +40,7 @@ install_bcm2835() {
             rm -rf "${lib_dir:?}" &&
             mkdir -p "$lib_dir" &&
             wget -q --show-progress -O "$download_dir/$archive" "$download_url" &&
-            tar -xzf "$download_dir/$archive" -C "$lib_dir" --strip-components=1s
+            tar -xzf "$download_dir/$archive" -C "$lib_dir" --strip-components=1
         ) || { fatal "Failed to download bcm2835." >&2; return 1; }
     fi
 
@@ -104,7 +104,7 @@ install_dependencies() {
     
     case "$MODEL_SELECTION" in
         1) 
-            echo "Installing bcm2835 GPIO library. *Note: This installation is system-wide."
+            echo "Installing bcm2835 GPIO library. *Note*: This installation is system-wide."
             install_bcm2835
             ;;
         2) 

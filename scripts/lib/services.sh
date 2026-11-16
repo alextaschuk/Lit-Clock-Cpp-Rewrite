@@ -65,7 +65,7 @@ install_clock_service() {
     rendered_service="$(mktemp)"
 
     sed -e "s|__EXEC_START__|$(escape_sed_replacement "$CLOCK_BINARY")|g" \
-        -e "s|__TIME_SYNC_SCRIPT__|$(escape_sed_replacement "$TIME_SYNC_SCRIPT")|g" \
+        -e "s|__SYNC_TIME_SCRIPT__|$(escape_sed_replacement "$SYNC_TIME_SCRIPT")|g" \
         "$CLOCK_SERVICE" > "$rendered_service"
 
     sudo install -m 644 "$rendered_service" /etc/systemd/system/CPP_clock.service
