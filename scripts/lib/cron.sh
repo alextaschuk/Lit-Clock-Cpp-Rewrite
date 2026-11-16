@@ -12,6 +12,7 @@
 # Should be called in install_clock.sh.
 ##################################################
 create_clock_cron_job() {
+    echo ""
     echo "Enabling auto-updates for the clock..."
 
     # Add the update script to the user's cron table

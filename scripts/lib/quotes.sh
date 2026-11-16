@@ -6,9 +6,9 @@
 
 ##################################################
 # Download the Quotes CSV from the Python clock's
-# remote repo. Notice that this is a subshell 
-# function.
-# 
+# remote repo.
+#
+# Notice that this is a subshell function.
 # Should be called in install_clock.sh.
 ##################################################
 download_quotes_csv() (
@@ -50,17 +50,51 @@ process_quotes() {
 # repo and store it in REMOTE_SHA.
 ##################################################
 get_remote_csv_hash() {
-    echo "$(date): Checking the remote CSV version of Python Clock..."
-    REMOTE_SHA=$(curl -fsS \
-        "https://api.github.com/repos/$PY_REPO/contents/$FILE?ref=$BRANCH" \
-        | grep -m1 '"sha":' \
-        | cut -d'"' -f4)
+    log "Checking the remote CSV version of Python Clock..."
+
+    local response=""
+    REMOTE_SHA=""
+
+
+    # Store GitHub's whole reply before searching it. If curl is piped straight into
+    # `grep -m1`, grep stops reading after its first match and curl fails whenever the
+    # reply is large (GitHub includes the file's contents in it for files under 1 MB).
+    if response="$(curl -fsS "https://api.github.com/repos/$PY_REPO/contents/$FILE?ref=$BRANCH")"; then
+        REMOTE_SHA="$(grep -m1 '"sha":' <<< "$response" | cut -d'"' -f4)" || REMOTE_SHA=""
+    fi
 
     if [[ -z "$REMOTE_SHA" ]]; then
-        echo "$(date): Error: Could not determine the remote CSV's SHA."
-        exit 1
+        error_ts "Could not determine the remote CSV's SHA."
+        return 1
     fi
 }
+
+
+##################################################
+# Download the quotes CSV and record its hash.
+# Prevents the update script's first run from
+# redownloading the same CSV.
+#
+# Should be called in install_clock.sh.
+##################################################
+install_quotes_csv() {
+    local sha_to_record=""
+
+    # Read the hash before downloading: if the CSV changes in between, the update script
+    # sees a different hash and downloads the newer version.
+    if get_remote_csv_hash; then
+        sha_to_record="$REMOTE_SHA"
+    fi
+
+    download_quotes_csv
+
+    if [[ -n "$sha_to_record" ]]; then
+        echo "$sha_to_record" > "$SHA_FILE"
+    else
+        rm -f "$SHA_FILE" # if hash fails to save, update script will download CSV on first run anyway
+    fi
+}
+
 
 ##################################################
 # Attempt to update the quotes CSV file and its
@@ -75,14 +109,14 @@ update_csv() {
     LOCAL_SHA=$(cat "$SHA_FILE" 2>/dev/null || true)
 
     if [[ "$REMOTE_SHA" != "$LOCAL_SHA" ]]; then
-        echo "$(date): CSV changed since last check. Downloading new version..."
+        log "CSV changed since last check. Downloading new version..."
         CSV_UPDATED=true
 
         download_quotes_csv
 
         echo "$REMOTE_SHA" > "$SHA_FILE"
-        echo "$(date): Successfully updated the CSV."
+        log "Successfully updated the CSV."
     else
-        echo "$(date): No changes to the CSV."
+        log "No changes to the CSV."
     fi
 }

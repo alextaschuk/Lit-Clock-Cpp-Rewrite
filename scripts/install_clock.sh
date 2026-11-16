@@ -23,7 +23,7 @@ check_environment # common.sh
 echo "┌──────────────────────────┐"
 echo "│Literary Quote Clock Setup│"
 echo "└──────────────────────────┘"
-echo "This script walks you through all of the necessary services install the clock, enable boot-time startup for the clock, and have it automatically update (e.g. receive new quotes)."
+echo -e "This script walks you through all of the necessary services install the clock, \nenable boot-time startup for the clock, \nand have it automatically update (e.g. receive new quotes)."
 
 get_user_config             # user_config.sh
 install_dependencies        # dependencies.sh
@@ -32,4 +32,5 @@ download_quotes_csv         # quotes.sh
 create_clock_cron_job       # cron.sh
 install_systemd_services    # services.sh
 
+echo ""
 echo "Clock setup complete."

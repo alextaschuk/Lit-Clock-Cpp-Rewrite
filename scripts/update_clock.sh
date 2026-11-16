@@ -18,12 +18,10 @@ set -euo pipefail # exit the script if a command fails at any point.
 # Project Directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)" # script must be at the top of the scripts/ dir
+ROOT="$REPO_DIR"
 
 source "$SCRIPT_DIR/lib/common.sh"
 source "$SCRIPT_DIR/lib/quotes.sh"
-
-# Project Files
-SHA_FILE="$SHARE_DIR/quotes.csv.sha"
 
 echo "┌───────────────────────────────────────┐"
 echo "$(date): Begin C++ Clock's update script."
@@ -35,9 +33,9 @@ echo "└───────────────────────�
 # if unsuccessful.
 ##################################################
 restart_pi() {
-    echo "$(date): Update complete. Restarting the Pi..."
+    log "Update complete. Restarting the Pi..."
     if ! sudo -n shutdown -r now; then
-        echo "$(date): Update completed, but restart failed (passwordless sudo should be set up for shutdown)" >&2
+        warn "Update completed, but restart failed (passwordless sudo should be set up for shutdown)" >&2
         return 1
     fi
 }
@@ -54,14 +52,14 @@ restart_pi() {
 ##################################################
 check_remote_repo() {
     REPO_UPDATED=false
-    echo "$(date): Attempting to pull from remote repo..."
+    log "Attempting to pull from remote repo..."
 
     local constants_changed=false
     local constants_was_staged=false
     local constants_backup=""
     
     if ! git -C "$REPO_DIR" diff --quiet HEAD -- "$CONSTANTS_FILE"; then
-        echo "$(date): Temporarily setting aside local constants.hpp changes."
+        log "Temporarily stashing local constants.hpp changes."
 
         constants_backup="$(mktemp)"
         cp "$CONSTANTS_FILE" "$constants_backup"
@@ -118,5 +116,5 @@ update_csv
 if [[ "$REPO_UPDATED" == true || "$CSV_UPDATED" == true ]]; then
     restart_pi
 else
-    echo "$(date): No updates, so restart not required."
+    log "No updates to the remote repo or the CSV, so a restart isn't required."
 fi

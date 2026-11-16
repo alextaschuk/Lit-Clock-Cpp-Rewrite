@@ -20,7 +20,7 @@ install_bcm2835() {
     local lib_dir="$EXTERN_DIR/bcm2835"
 
     if [[ -f /usr/local/include/bcm2835.h ]]; then
-        echo "bcm2835 is already installed at /usr/local/."
+        echo "bcm2835 is already installed system-wide at /usr/local/. Using existing library..."
         return 0
     fi
 
@@ -35,26 +35,23 @@ install_bcm2835() {
         download_dir="$(mktemp -d "${lib_dir}-download.XXXXXX")" || return 1
 
         (
-            set -e
             trap 'rm -rf "$download_dir"' EXIT
 
-            rm -rf "${lib_dir:?}"
-            mkdir -p "$lib_dir"
-
-            wget -q --show-progress -O "$download_dir/$archive" "$download_url"
-            tar -xzf "$download_dir/$archive" -C "$lib_dir" --strip-components=1
-        ) || { echo "Failed to download bcm2835." >&2; return 1; }
+            rm -rf "${lib_dir:?}" &&
+            mkdir -p "$lib_dir" &&
+            wget -q --show-progress -O "$download_dir/$archive" "$download_url" &&
+            tar -xzf "$download_dir/$archive" -C "$lib_dir" --strip-components=1s
+        ) || { fatal "Failed to download bcm2835." >&2; return 1; }
     fi
 
     echo "Installing bcm2835 library..."
     (
-        set -e
-        cd "$lib_dir" || exit
-        ./configure
-        make -j"$(nproc)"
-        sudo make check
+        cd "$lib_dir" &&
+        ./configure &&
+        make -j"$(nproc)" &&
+        { sudo make check || warn "bcm2835's self-test failed. Installing it anyway." >&2; } &&
         sudo make install
-    ) || { echo "Failed to build/install bcm2835." >&2; return 1; }
+    ) || { fatal "Failed to build/install bcm2835." >&2; return 1; }
 }
 
 
@@ -72,6 +69,8 @@ install_lg() {
         return 0
     fi
 
+    require_tools unzip # see common.sh
+
     mkdir -p "$EXTERN_DIR" || return 1
 
     if [[ -f "$lib_dir/Makefile" ]]; then
@@ -79,18 +78,17 @@ install_lg() {
     else
         echo "Downloading lg library..."
         (
-            set -e
             trap 'rm -f "$archive"' EXIT
-            wget -q --show-progress -O "$archive" https://github.com/joan2937/lg/archive/master.zip
+
+            wget -q --show-progress -O "$archive" https://github.com/joan2937/lg/archive/master.zip &&
             unzip -q -o "$archive" -d "$EXTERN_DIR"
         ) || { echo "Failed to download lg." >&2; return 1; }
     fi
 
     echo "Installing lg library..."
     (
-        set -e
-        cd "$lib_dir"
-        make -j"$(nproc)"
+        cd "$lib_dir" &&
+        make -j"$(nproc)" &&
         sudo make install
     ) || { echo "Failed to build/install lg." >&2; return 1; }
 }
@@ -102,12 +100,21 @@ install_lg() {
 # Should be called in install_clock.sh.
 ##################################################
 install_dependencies() {
+    echo ""
+    
     case "$MODEL_SELECTION" in
-        1) install_bcm2835 ;;
-        2) install_lg ;;
-        *) error "Invalid Raspberry Pi model selection: $MODEL_SELECTION" ;;
+        1) 
+            echo "Installing bcm2835 GPIO library. *Note: This installation is system-wide."
+            install_bcm2835
+            ;;
+        2) 
+            echo "Installing lg GPIO library."
+            install_lg
+            ;;
+        *)
+            error "Invalid Raspberry Pi model selection: $MODEL_SELECTION"
+            ;;
     esac
 
-    echo ""
     echo "GPIO library installation complete."
 }

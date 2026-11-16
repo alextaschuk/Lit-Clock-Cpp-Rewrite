@@ -2,10 +2,12 @@
 [Unit]
 Description = C++ Book Quote Clock
 After=network-online.target CPP_clock_build.service
-Requires=CPP_clock_build.service
+Wants=network-online.target CPP_clock_build.service
+
 
 [Service]
 Type=simple
+ExecStartPre=-/bin/bash __TIME_SYNC_SCRIPT__
 ExecStart=__EXEC_START__
 KillSignal=SIGINT
 Restart=on-failure
