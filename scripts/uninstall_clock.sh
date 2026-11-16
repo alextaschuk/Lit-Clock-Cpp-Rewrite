@@ -1,82 +1,116 @@
 #!/bin/bash
+##################################################
+# Script to uninstall the clock from a user's
+# system.
+##################################################
+
+
 set -euo pipefail
 
-##################################################
-# Run this script from the clock's root directory.
-##################################################
+U_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" # path to this file
+ROOT="$(dirname "$U_SCRIPT_DIR")"
 
-if [[ "$EUID" -eq 0 ]]; then
-    echo "Error: Run this setup script as your regular user, without sudo."
-    exit 1
-fi
+source "$U_SCRIPT_DIR/lib/common.sh"
 
-ROOT="$(pwd)" # e.g. home/user/Lit-Clock-Cpp-Rewrite
-
-BUILD_SERVICE="CPP_clock_build.service"
-CLOCK_SERVICE="CPP_clock.service"
-
-if [[ ! -f "$ROOT/CMakeLists.txt" ]]; then
-    echo "Error: This script must be ran from the clock's root directory (Lit-Clock-Cpp-Rewrite/)."
-    exit 1
-fi
-
-echo "┌──────────────────────────────┐"
-echo "│Literary Quote Clock Uninstall│"
-echo "└——————————————────—————————──—┘"
-printf "This script uninstalls the Literary Quote Clock and all associated files, processes, etc.\r\n"
+source "$U_SCRIPT_DIR/lib/cron.sh"
+source "$U_SCRIPT_DIR/lib/dependencies.sh"
+source "$U_SCRIPT_DIR/lib/services.sh"
 
 
 ##################################################
-# Stop the clock and uninstall the startup service
-# scripts and the auto-update script.
+# Make sure that the script was ran correctly and
+# that ROOT is the clock's folder, since it's
+# deleted at the end.
 ##################################################
-printf "\r\nUninstalling the clock's startup scripts and the auto-update script..."
+check_uninstall_environment() {
+    if [[ "$EUID" -eq 0 ]]; then
+        fatal "Run this script as your regular user, without sudo."
+        exit 1
+    fi
 
-# remove service scripts
-sudo systemctl stop "$CLOCK_SERVICE"
+    if [[ -z "$ROOT" || "$ROOT" == "/" || "$ROOT" == "$HOME" ]]; then
+        fatal "Refusing to uninstall: $ROOT is not the clock's folder."
+        exit 1
+    fi
 
-sudo systemctl disable "$CLOCK_SERVICE"
-sudo systemctl disable "$BUILD_SERVICE"
+    if [[ ! -f "$CMAKE_FILE" || ! -f "$CONSTANTS_FILE" || ! -f "$SCRIPTS_DIR/uninstall_clock.sh" ]]; then
+        fatal "Refusing to uninstall: $ROOT does not look like the clock's folder."
+        exit 1
+    fi
+}
 
-sudo rm /etc/systemd/system/"$CLOCK_SERVICE"
-sudo rm /etc/systemd/system/"$BUILD_SERVICE"
-
-sudo systemctl daemon-reload
-sudo systemctl reset-failed
-
-# remove auto-update from cron table
-UPDATE_SCRIPT="$ROOT/scripts/update_clock.sh"
-CURRENT_CRONTAB="$(crontab -l 2>/dev/null || true)"
-
-if ! printf '%s\n' "$CURRENT_CRONTAB" | grep -Fq "$UPDATE_SCRIPT"; then
-    echo "Auto-update cron job not found. Moving on..."
-fi
-
-# keep all other cron jobs
-NEW_CRONTAB="$(printf '%s\n' "$CURRENT_CRONTAB" | grep -Fv "$UPDATE_SCRIPT" || true)"
- 
-if printf '%s' "$NEW_CRONTAB" | grep -q '[^[:space:]]'; then
-    printf '%s\n' "$NEW_CRONTAB" | crontab -
-else
-    crontab -r # auto-update was the only thing in crontab, so wipe the crontable
-fi
-
-printf "\r\nStartup and auto-update scripts successfully uninstalled."
 
 ##################################################
-# Remove the bcm2835 library (ignores system-wide)
-# bcm2835 installations).
+# Ask the user to confirm, since the uninstall
+# can't be undone.
 ##################################################
-sudo rm /usr/local/include/bcm2835.h
-sudo rm /usr/local/lib/libbcm2835.a
+confirm_uninstall() {
+    local answer
+
+    echo "This script will:"
+    echo "  - Stop the clock and remove its startup services."
+    echo "  - Remove the auto-update cron job."
+    echo "  - Remove the GPIO library, IFF the clock's install script installed it."
+    echo "  - Permanently delete $ROOT and everything in it."
+    echo "*Note*: This action cannot be undone."
+    echo ""
+
+    while true; do
+        read -r -p "Uninstall the clock? [Y/N]: " answer
+        case "$answer" in
+            [yY]|[yY][eE][sS])
+                break ;;
+            [nN]|[nN][oO])
+                echo "Uninstall cancelled. Nothing was changed."
+                exit 0
+                ;;
+            *)
+                echo "Invalid input. Please enter Y or N." ;;
+        esac
+    done
+}
+
 
 ##################################################
-# Delete Lit-Clock-Cpp-Rewrite/ directory
+# Delete the clock's folder.
 ##################################################
-cd /
-if [[ -n "$ROOT" && "$ROOT" != "/" && "$ROOT" != "$HOME" ]]; then
-    rm -rf -- "$ROOT"
-    echo "Deleted Lit-Clock-Cpp-Rewrite/ directory"
-fi
+delete_clock_dir() {
+    echo ""
+    echo "Deleting $ROOT..."
 
-echo "Clock uninstall complete. To reinstall, visit https://github.com/alextaschuk/Lit-Clock-Cpp-Rewrite"
+    cd / # don't delete the directory that the shell is in
+
+    # The GPIO library is installed with sudo, which can leave files in extern/ that only
+    # root is able to delete. So if deleting as the user fails, it is retried with sudo.
+    if ! rm -rf -- "${ROOT:?}" 2>/dev/null; then
+        sudo rm -rf -- "${ROOT:?}"
+    fi
+
+    echo "Deleted $ROOT."
+}
+
+
+# The uninstall process is run from a function so that bash has read this whole file before
+# the file is deleted along with the rest of the clock's folder.
+main() {
+    check_uninstall_environment
+
+    echo "┌────────────────────────────┐"
+    echo "│Literary Quote Clock Install│"
+    echo "└────────────────────────────┘"
+
+    confirm_uninstall
+
+    # If one of these steps fails the script stops here, before the folder (and this script)
+    # is deleted, so that it can be run again.
+    uninstall_systemd_services  # services.sh
+    remove_clock_cron_job       # cron.sh
+    uninstall_dependencies      # dependencies.sh
+    delete_clock_dir
+
+    echo ""
+    echo "Clock uninstall complete. To reinstall, visit https://github.com/alextaschuk/Lit-Clock-Cpp-Rewrite"
+}
+
+main "$@"
+exit 0

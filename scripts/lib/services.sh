@@ -88,3 +88,35 @@ install_systemd_services() {
     install_build_service
     install_clock_service
 }
+
+
+##################################################
+# Disable and delete the clock's two startup
+# services.
+#
+# Should be called in uninstall_clock.sh.
+##################################################
+uninstall_systemd_services() {
+    echo ""
+    echo "Stopping the clock and removing its startup services..."
+
+    local service
+    local service_file
+
+    # the clock's service is first so that the clock is stopped before anything is deleted
+    for service in CPP_clock.service CPP_clock_build.service; do
+        service_file="/etc/systemd/system/$service"
+
+        if [[ ! -f "$service_file" ]]; then
+            warn "$service is not installed. Moving on..."
+            continue
+        fi
+
+        sudo systemctl disable --now "$service"
+        sudo rm -f "/etc/systemd/system/$service"
+        echo "Removed $service."
+    done
+
+    sudo systemctl daemon-reload
+    sudo systemctl reset-failed CPP_clock.service CPP_clock_build.service 2>/dev/null || true
+}
