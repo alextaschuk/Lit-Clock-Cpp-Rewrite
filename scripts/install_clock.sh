@@ -18,19 +18,25 @@ source "$I_SCRIPT_DIR/lib/quotes.sh"
 source "$I_SCRIPT_DIR/lib/services.sh"
 source "$I_SCRIPT_DIR/lib/user_config.sh"
 
-check_environment # common.sh
 
-echo "┌──────────────────────────┐"
-echo "│Literary Quote Clock Setup│"
-echo "└──────────────────────────┘"
-echo -e "This script walks you through all of the necessary services install the clock, \nenable boot-time startup for the clock, \nand have it automatically update (e.g. receive new quotes)."
+main() {
+    check_environment # common.sh
 
-get_user_config             # user_config.sh
-install_dependencies        # dependencies.sh
-configure_clock             # configure.sh
-install_quotes_csv          # quotes.sh
-create_clock_cron_job       # cron.sh
-install_systemd_services    # services.sh
+    echo "┌──────────────────────────┐"
+    echo "│Literary Quote Clock Setup│"
+    echo "└──────────────────────────┘"
+    echo -e "This script walks you through all of the necessary services install the clock, \nenable boot-time startup for the clock, \nand have it automatically update (e.g. receive new quotes)."
 
-echo ""
-echo "Clock setup complete."
+    get_user_config             # user_config.sh
+    install_dependencies        # dependencies.sh
+    configure_clock             # configure.sh
+    install_quotes_csv          # quotes.sh
+    create_clock_cron_job       # cron.sh
+    install_systemd_services    # services.sh
+
+    echo ""
+    echo "Clock setup complete."
+}
+
+main "$@"
+exit 0
