@@ -28,7 +28,7 @@ echo -e "This script walks you through all of the necessary services install the
 get_user_config             # user_config.sh
 install_dependencies        # dependencies.sh
 configure_clock             # configure.sh
-download_quotes_csv         # quotes.sh
+install_quotes_csv          # quotes.sh
 create_clock_cron_job       # cron.sh
 install_systemd_services    # services.sh
 
