@@ -14,7 +14,8 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 1. [How to Set up the Clock](#how-to-set-up-the-clock)
     1. [Materials](#materials)
     2. [How to Install the Clock](#how-to-install-the-clock)
-    3. [Additional Config, Setup, and Dev Info](#additional-config-setup-and-dev-info)
+    3. [How to Uninstall the Clock](#how-to-uninstall-the-clock)
+    4. [Additional Config and Dev Info](#additional-config-and-dev-info)
 
 2. [Text Formatting](#text-formatting)
     1. [_Italic Text_](#italic-_-u005f-low-lineunderscore)
@@ -52,7 +53,17 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
     bash scripts/install_clock.sh
     ```
 
-### Additional Config, Setup, and Dev Info
+### How to Uninstall the Clock
+
+1. Run the clock's uninstall script (either from the Clock's root directory, or include the entire path to the install script):
+
+    ```sh
+    bash scripts/uninstall_clock.sh
+    ```
+
+    - _Note_: Though this is a destructive script, if the install script did not install a GPIO library (i.e., it was already installed on the RPi), the system-wide installation is not modified.
+
+### Additional Config and Dev Info
 
 #### Creating a Build Manually
 
