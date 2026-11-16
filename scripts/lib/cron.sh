@@ -16,7 +16,7 @@ create_clock_cron_job() {
     echo "Enabling auto-updates for the clock..."
 
     # Add the update script to the user's cron table
-    LOG_FILE="$ROOT/update_clock.log"
+    LOG_FILE="$SCRIPTS_DIR/update_clock.log"
     CRON_JOB="0 4 * * * bash \"$UPDATE_SCRIPT\" >> \"$LOG_FILE\" 2>&1"
     CURRENT_CRONTAB="$(crontab -l 2>/dev/null || true)"
 

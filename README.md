@@ -124,7 +124,7 @@ The clock uses two service scripts to start when the Pi is powered on (or reset)
 #### Automatic Updates Script
 A cron job runs an update script daily at 04:00. It pulls any changes from the clock's remote repo and updates the CSV file containing all of the clock's quotes when necessary (which is stored in the Python Clock's repo.) 
 
-The update script's logs are stored at `Lit-Clock-Cpp-Rewrite/update_clock.log`.'
+The update script's logs are stored at `Lit-Clock-Cpp-Rewrite/scripts/update_clock.log`.'
 
 #### Other
 - [`constants.hpp`](/include/constants.hpp) has global variables that can be modified to make further changes for the clock (e.g., if you want to change the background color of the clock to black, set `BG_COLOR=0`).
