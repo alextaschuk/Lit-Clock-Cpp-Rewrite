@@ -14,7 +14,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 1. [How to Set up the Clock](#how-to-set-up-the-clock)
     1. [Materials](#materials)
     2. [How to Install the Clock](#how-to-install-the-clock)
-    3. [Additional Config/Setup Info](#additional-configsetup-info)
+    3. [Additional Config, Setup, and Dev Info](#additional-config-setup-and-dev-info)
 
 2. [Text Formatting](#text-formatting)
     1. [_Italic Text_](#italic-_-u005f-low-lineunderscore)
@@ -52,10 +52,62 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
     bash scripts/install_clock.sh
     ```
 
-### Additional Config/Setup Info
+### Additional Config, Setup, and Dev Info
+
+#### Creating a Build Manually
+
+There are two build types that the clock and image generation programs can be built with: `Debug` and `Release`. Additionally, the image generation program can be compiled by itself, or together with the clock program. The clock can only be compiled on an RPi, since it requires the bcm2835 or lg library to build the display driver against. The image generator can be compiled on any device (useful for debugging and previewing images).
+
+When you compile one or both of the programs, there are some flags that can be added to the build's configure command:
+
+**`-DCMAKE_BUILD_TYPE=Debug/Release`** (*Optional*): Set the build type.
+- `Debug` (_Default_): Useful for... debugging.
+- `Release`: An optimized version of the build. This is the build type the install script uses.
+
+**`-DBUILD_CLOCK=ON/OFF`** (*Optional*): Determine if the clock should be compiled.
+- `ON` (_Default_, if compiling on an RPi): Compiles the image generator _and_ the clock.
+- `OFF` (_Default_, if compiling on a non-RPi system): Compiles only the image generator.
+
+**`-DGPIO_BACKEND=BCM2835/LGPIO`** (*Optional*): Define which GPIO library the display driver should be built against. This flag is *Required* only when compiling on an RPi with `-DBUILD_CLOCK=ON` (which it is, by default, on an RPi).
+- `BCM2835` if you are building on an RPi 4 or below. 
+- `LGPIO` if you are building on an RPi 5 or below.
+
+_Note_: These flags are remembered per build directory, so re-running a build's configure command with an existing directory will reuse the earlier flags. Any new flags that are passed in when the command is re-ran will be saved in the build's cache.
+
+Examples:
+
+- Configure and compile a debug build on a non-RPi system:
+
+    ```sh
+    cmake -S . -B build-debug
+    cmake --build build-debug
+    ```
+
+- Configure and compile a release build on an RPi 3:
+
+    ```sh
+    cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DGPIO_BACKEND=BCM2835
+    cmake --build build-release
+    ```
+
+#### Manually Running an Executable
+
+The clock and image generation programs have their own executable files. They live in a generated build directory.
+
+- To run the clock's executable:
+
+    ```sh
+    .build-folder/clock
+    ```
+
+- To generate and save images of the quotes to an `images/` directory, run the following:
+
+    ```sh
+    .build-folder/save_images
+    ```
 
 #### Boot-Time Startup Scripts
-The clock uses two service scripts to start when the Pi is powered on (or reset): [`CPP_clock_build.service`](/scripts/CPP_clock_build.service) (re)builds the clock's binary (in the event of any updates), and [`CPP_clock.service`](/scripts/CPP_clock.service) runs the binary.
+The clock uses two service scripts to start when the Pi is powered on (or reset): [`CPP_clock_build.service`](/scripts/CPP_clock_build.service) (re)builds the clock's executable (in the event of any updates), and [`CPP_clock.service`](/scripts/CPP_clock.service) runs the executable.
 
 - To view the top (start) of the clock's logs:
 
@@ -74,54 +126,9 @@ A cron job runs an update script daily at 04:00. It pulls any changes from the c
 
 The update script's logs are stored at `Lit-Clock-Cpp-Rewrite/update_clock.log`.'
 
-#### Create a Build File Manually. 
-
-There are two build types that the clock and image generation programs can be built with: `Debug` and `Release`. To create a build, run one (or both) of the following from the project's root directory:
-
-- _Note_:
-    - If you are building on an RPi 4 or below, replace the `-DGPIO_BACKEND=GPIO_LIB` flag to 
-    `-DGPIO_BACKEND=BCM2835`. 
-    - If you are building on a RPi 5 or above, change the `-DGPIO_BACKEND=GPIO_LIB` flag to `-DGPIO_BACKEND=LGPIO`.
-
-- _Note_: Configuring a build without `-DCMAKE_BUILD_TYPE` will default the build to `Debug`.
-
-- To create a debug build:
-
-    ```sh
-    cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DGPIO_BACKEND=GPIO_LIB
-    cmake --build build-debug
-    ```
-
-- To create a release build:
-    
-    ```sh
-    cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DGPIO_BACKEND=GPIO_LIB
-    cmake --build build-release
-    ```
-
-The clock and image generation programs have their own binary files.
-
-- To run the clock's binary:
-
-    ```sh
-    ./clock
-    ```
-
-- To run the image generation's binary (saves images to an `images/` folder): 
-
-    ```sh
-    ./save_images
-    ```
-
-
 #### Other
 - [`constants.hpp`](/include/constants.hpp) has global variables that can be modified to make further changes for the clock (e.g., if you want to change the background color of the clock to black, set `BG_COLOR=0`).
 
-- To generate and save images of the quotes to an `images/` directory, run the following from the clock's `build/` directory (useful for debugging and previewing images):
-
-    ```sh
-    ./save_images
-    ```
 
 
 ## Text Formatting
