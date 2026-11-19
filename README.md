@@ -39,23 +39,42 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
 ### How to Install the Clock
 1. Complete steps 1 and 2 on the [Working with Raspberry Pi (SPI)](https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#Working_with_Raspberry_Pi_.28SPI.29) section of Waveshare's wiki page (ensure the screen is properly connected to the Pi, and set the DIP switch to SPI mode on the IT8951 Driver HAT).
 
-2. Clone this repository recursively onto the Pi (necessary to enable logger functions via spdlog):
+2. Download the clock's install script onto the Pi:
 
     ```sh
-    git clone --recursive https://github.com/alextaschuk/Lit-Clock-Cpp-Rewrite.git
+    curl -fsSLO https://raw.githubusercontent.com/alextaschuk/Lit-Clock-Cpp-Rewrite/main/scripts/install_clock.sh
     ```
 
-    - *Note*: If you forgot the `--recursive` flag, run `git submodule update --init` to clone the logging library locally.
+3. Run the install script. It clones this repository into a `Lit-Clock-Cpp-Rewrite/` folder and installs the clock:
 
-3. Run the clock's install script (either from the Clock's root directory, or include the entire path to the install script):
+    - To clone the repository into the current directory:
 
     ```sh
-    bash scripts/install_clock.sh
+    bash install_clock.sh
     ```
+
+    - To clone the repository into a directory somewhere else, pass in the directory parent directory's path (the directory is created if it doesn't exist):
+
+    ```sh
+    bash install_clock.sh /path/to/directory
+    ```
+
+
+#### Installing From an Existing Clone
+
+If you have already cloned the repository, run the install script from inside it instead. The repo must be cloned recursively (necessary to enable logger functions via spdlog):
+
+```sh
+git clone --recursive https://github.com/alextaschuk/Lit-Clock-Cpp-Rewrite.git
+bash Lit-Clock-Cpp-Rewrite/scripts/install_clock.sh
+```
+
+- _Note_: If you forgot the `--recursive` flag, run `git submodule update --init` to clone the logging library locally before running the install script.
+
 
 ### How to Uninstall the Clock
 
-1. Run the clock's uninstall script (either from the Clock's root directory, or include the entire path to the install script):
+1. Run the uninstall script:
 
     ```sh
     bash scripts/uninstall_clock.sh
@@ -81,7 +100,7 @@ When you compile one or both of the programs, there are some flags that can be a
 
 **`-DGPIO_BACKEND=BCM2835/LGPIO`** (*Optional*): Define which GPIO library the display driver should be built against. This flag is *Required* only when compiling on an RPi with `-DBUILD_CLOCK=ON` (which it is, by default, on an RPi).
 - `BCM2835` if you are building on an RPi 4 or below. 
-- `LGPIO` if you are building on an RPi 5 or below.
+- `LGPIO` if you are building on an RPi 5 or above.
 
 _Note_: These flags are remembered per build directory, so re-running a build's configure command with an existing directory will reuse the earlier flags. Any new flags that are passed in when the command is re-ran will be saved in the build's cache.
 
