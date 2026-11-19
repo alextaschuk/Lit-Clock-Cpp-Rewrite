@@ -60,7 +60,7 @@ This is a C++ rewrite of my [Literary Quote Clock](https://github.com/alextaschu
     ```
 
 
-#### Installing From an Existing Clone
+#### Installing From an Existing Clone, or Manually Cloning and Installing
 
 If you have already cloned the repository, run the install script from inside it instead. The repo must be cloned recursively (necessary to enable logger functions via spdlog):
 
