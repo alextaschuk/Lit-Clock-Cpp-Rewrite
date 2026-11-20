@@ -177,3 +177,16 @@ void Horologium::tick_forward()
     refreshBuffer();
     spdlog::info("refreshed the buffer");
 }
+
+
+void Horologium::clearAndExit(std::string shutdownMsg, bool isCritical) {
+    if (isCritical)
+        spdlog::critical(shutdownMsg);
+    else
+        spdlog::info(shutdownMsg);
+
+    EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
+    spdlog::info("Cleared the screen.");
+    DEV_Module_Exit();
+    exit(0);
+}

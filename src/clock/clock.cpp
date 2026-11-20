@@ -13,11 +13,8 @@ static Horologium* activeHorologium = nullptr;
 // before shutting the clock down.
 void Handler(int signo)
 {
-    spdlog::info("Ctrl + C detected. Turning the clock off...");
-    EPD_IT8951_Clear_Refresh(activeHorologium->Dev_Info, activeHorologium->Init_Target_Memory_Addr, INIT_Mode);
-    spdlog::info("Cleared the screen.");
-    DEV_Module_Exit();
-    exit(0);
+    std::string msg = "Ctrl + C detected. Turning the clock off...";
+    activeHorologium->clearAndExit(msg, false);
 }
 
 
@@ -41,6 +38,7 @@ void displayStartupMsg(Horologium& horologium)
 
 
 // Displays the first quote after the Pi's RTC has updated.
+// The first quote is not buffered.
 void displayFirstImage(Horologium& horologium)
 {
     horologium.getTime(horologium.bufferedHour, horologium.bufferedMinute);
@@ -109,10 +107,8 @@ int main()
 
             std::this_thread::sleep_for(std::chrono::seconds(sleepDuration(currSecond)));
         }
-    } catch (...)
-    {
-        spdlog::critical("An error occurred for unknown reasons.");
-        EPD_IT8951_Clear_Refresh(horologium.Dev_Info, horologium.Init_Target_Memory_Addr, GC16_Mode);
-        exit(0);
+    } catch (...) {
+        std::string msg = "An error occurred for unknown reasons.";
+        horologium.clearAndExit(msg, true);
     }
 }

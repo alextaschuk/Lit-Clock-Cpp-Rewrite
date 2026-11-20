@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <print>
+#include <string>
 #include <vector>
 
 extern "C" {
@@ -73,8 +74,8 @@ class Horologium
         Writer writer;
 
         ImageBuffer buffer; // Ring buffer containing the next `MAX_IMAGES_TO_BUFFER` number of images.
-        size_t bufferedHour = 0;    // Hour of the last buffered quote
-        size_t bufferedMinute = 0;  // Minute of the last buffered quote
+        size_t bufferedHour = 0;    // Hour of the quote for the buffer's `tail`.
+        size_t bufferedMinute = 0;  // Minute of the quote for the buffer's `tail`.
 
         std::vector<std::vector<std::unordered_map<std::string, std::string>>> quotes; // A cache for the quotes from a CSV file.
 
@@ -137,4 +138,14 @@ class Horologium
         // hour: output parameter. The hour of the next minute (0-23).
         // minute: output parameter. The next minute (0-59).
         void advanceTime(size_t& hour, size_t& minute);
+
+        // Clears the screen, deactivates it, and shuts the clock down.
+        //
+        // This function should be called whenever a fatal error occurs
+        // with the clock.
+        //
+        // shutdownMsg: The reason for the shutdown to log.
+        // isCritical: Determines if errMsg is printed via spdlog::info() or
+        // spdlog::critical().
+        void clearAndExit(std::string shutdownMsg, bool isCritical);
 };
