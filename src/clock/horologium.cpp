@@ -16,7 +16,7 @@
 #include "constants.hpp"
 #include "utils.hpp"
 
-int Horologium::cacheQuotes()
+int Horologium::CacheQuotes()
 {    
     std::ifstream quoteFile(projectPath(QUOTES_PATH));
     if (!quoteFile.is_open())
@@ -77,7 +77,7 @@ int Horologium::cacheQuotes()
 }
 
 
-std::vector<unsigned char> Horologium::getImage(const size_t& quoteHour, const size_t& quoteMin)
+std::vector<unsigned char> Horologium::GetImage(const size_t& quoteHour, const size_t& quoteMin)
 {
     std::string minute = (quoteMin < 10) ? "0" + std::to_string(quoteMin) : std::to_string((quoteMin));
     std::string hour = (quoteHour < 10) ? "0" + std::to_string(quoteHour) : std::to_string(quoteHour);
@@ -93,11 +93,11 @@ std::vector<unsigned char> Horologium::getImage(const size_t& quoteHour, const s
     
     std::unordered_map<std::string, std::string> selectedRow = usableRows[distr(gen)];
     spdlog::info("Generating image for {}:{}, includeCredits={}, start of quote: \"{}...\"", hour, minute, includeCredits, selectedRow["quote"].substr(0,50));
-    return writer.generateQuoteImage(selectedRow, includeCredits);
+    return writer.GenerateQuoteImage(selectedRow, includeCredits);
 }
 
 
-std::vector<unsigned char> Horologium::convertTo4bpp(const std::vector<unsigned char>& image)
+std::vector<unsigned char> Horologium::ConvertTo4Bpp(const std::vector<unsigned char>& image)
 {
     const int bytesPerRow = (Panel_Width + 1) / 2;
     std::vector<unsigned char> packed(bytesPerRow * Panel_Height, 0);
@@ -120,32 +120,32 @@ std::vector<unsigned char> Horologium::convertTo4bpp(const std::vector<unsigned 
 }
 
 
-void Horologium::displayQuote()
+void Horologium::DisplayQuote()
 {
-    UBYTE* currentImagePtr = buffer.popImage();
+    UBYTE* currentImagePtr = buffer.PopImage();
     Paint_SelectImage(currentImagePtr);
     EPD_IT8951_4bp_Refresh(currentImagePtr, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr, false);
     spdlog::info("Displayed a new quote.");
 }
 
 
-void Horologium::bufferImage(size_t hour, size_t minute)
+void Horologium::BufferImage(size_t hour, size_t minute)
 {
-    std::vector<unsigned char> image8bpp = getImage(hour, minute);
-    std::vector<unsigned char> packed4bpp = convertTo4bpp(getImage(hour, minute));
-    buffer.pushImage(packed4bpp);
+    std::vector<unsigned char> image8bpp = GetImage(hour, minute);
+    std::vector<unsigned char> packed4bpp = ConvertTo4Bpp(GetImage(hour, minute));
+    buffer.PushImage(packed4bpp);
 }
 
 
 void Horologium::refreshBuffer()
 {
-    advanceTime(bufferedHour,bufferedMinute);
-    bufferImage(bufferedHour, bufferedMinute);
+    AdvanceTime(bufferedHour,bufferedMinute);
+    BufferImage(bufferedHour, bufferedMinute);
     spdlog::info("Refreshed the buffer (a new image was added).");
 }
 
 
-void Horologium::getTime(size_t& hour, size_t& minute)
+void Horologium::GetTime(size_t& hour, size_t& minute)
 {
     std::time_t t = std::time(nullptr);
     std::tm* localTime = std::localtime(&t);
@@ -154,7 +154,7 @@ void Horologium::getTime(size_t& hour, size_t& minute)
 }
 
 
-void Horologium::advanceTime(size_t& hour, size_t& minute)
+void Horologium::AdvanceTime(size_t& hour, size_t& minute)
 {
     if (minute == 59) {
         minute = 0;
@@ -165,43 +165,43 @@ void Horologium::advanceTime(size_t& hour, size_t& minute)
 }
 
 
-void Horologium::tick_forward()
+void Horologium::TickClockForward()
 {
-    wakeScreen();
+    WakeScreen();
 
     size_t currHour = 0, currMin = 0;
-    getTime(currHour, currMin);
+    GetTime(currHour, currMin);
     if (currMin == 59) {
         spdlog::info("An hour has passed. Performing a full refresh on the display.");
         EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, GC16_Mode);
     }
     
-    displayQuote();
+    DisplayQuote();
     refreshBuffer();
-    sleepScreen();
+    SleepScreen();
 }
 
 
-void Horologium::wakeScreen()
+void Horologium::WakeScreen()
 {
     EPD_IT8951_SystemRun();
 }
 
 
-void Horologium::sleepScreen()
+void Horologium::SleepScreen()
 {
     EPD_IT8951_WaitForDisplayReady();
     EPD_IT8951_Sleep();
 }
 
 
-void Horologium::clearAndExit(std::string shutdownMsg, bool isCritical) {
+void Horologium::ClearAndExit(std::string shutdownMsg, bool isCritical) {
     if (isCritical)
         spdlog::critical(shutdownMsg);
     else
         spdlog::info(shutdownMsg);
 
-    wakeScreen();
+    WakeScreen();
     EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
 
     // wait for display wipe to finish before resetting the controller

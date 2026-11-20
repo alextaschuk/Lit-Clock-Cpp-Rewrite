@@ -17,22 +17,22 @@ class ImageBuffer {
         std::vector<unsigned char> data = std::vector<unsigned char>(BUFFER_SIZE, 0); // The buffer where images are stored.
 
         // Returns the byte offset for the head.
-        size_t getReadOffset () const {
+        size_t GetReadOffset () const {
             return head * IMAGE_SIZE_4BPP;
         }
 
         // Returns the byte offset for the tail.
-        size_t getWriteOffset () const {
+        size_t GetWriteOffset () const {
             return tail * IMAGE_SIZE_4BPP;
         }
 
         // Returns true if the buffer currently stores no images.
-        bool isEmpty() const {
+        bool IsEmpty() const {
             return size == 0;
         }
 
         // Returns true if the buffer is currently at its maximum capacity.
-        bool isFull() const {
+        bool IsFull() const {
             return size == MAX_IMAGES_TO_BUFFER;
         }
 
@@ -41,12 +41,12 @@ class ImageBuffer {
         // image: The image's pixel data. Must be exactly `IMAGE_SIZE_4BPP` bytes long.
         //
         // Throws `std::runtime_error` if the buffer is already full, or if `image` is not exactly `IMAGE_SIZE_4BPP` bytes long.
-        void pushImage(const std::vector<unsigned char>& image);
+        void PushImage(const std::vector<unsigned char>& image);
 
         // Pops the oldest buffered image and returns a pointer to it, advancing `head` to the next slot.
         //
         // Throws `std::runtime_error` if the buffer is empty.
         //
         // Returns a pointer to the popped image's data, `IMAGE_SIZE_4BPP` bytes long.
-        std::uint8_t* popImage();
+        std::uint8_t* PopImage();
 };

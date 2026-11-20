@@ -10,14 +10,14 @@
 #include "constants.hpp"
 #include "utils.hpp"
 
-void Writer::saveImages()
+void Writer::SaveImages()
 {
     try {
-        initFont(projectPath("/share/fonts/Bookerly.ttf"), fonts.regularBuf, fonts.regular);
-        initFont(projectPath("/share/fonts/Bookerly-Italic.ttf"), fonts.italicBuf, fonts.italic);
-        initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.boldBuf, fonts.bold);
-        initFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), fonts.italicBoldBuf, fonts.italicBold);
-        initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.creditBuf, fonts.credit);
+        InitFont(projectPath("/share/fonts/Bookerly.ttf"), fonts.regularBuf, fonts.regular);
+        InitFont(projectPath("/share/fonts/Bookerly-Italic.ttf"), fonts.italicBuf, fonts.italic);
+        InitFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.boldBuf, fonts.bold);
+        InitFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), fonts.italicBoldBuf, fonts.italicBold);
+        InitFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.creditBuf, fonts.credit);
     } catch (const std::runtime_error) {
         spdlog::critical("Failed to initialize fonts. Stopping image generation.");
         return;
@@ -88,7 +88,7 @@ void Writer::saveImages()
         std::string time = row["time"].replace(2, 1, "");
         std::string filepath = projectPath(IMAGE_PATH + "quote_" + time + "_" + std::to_string(imgNum) + "." + IMAGE_FORMAT);
 
-        std::vector<unsigned char> imgOut = generateQuoteImage(row, INCLUDE_CREDITS);
+        std::vector<unsigned char> imgOut = GenerateQuoteImage(row, INCLUDE_CREDITS);
         
         if (IMAGE_FORMAT == "bmp") {
             stbi_write_bmp(filepath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, imgOut.data());
@@ -110,7 +110,7 @@ int main()
     auto start = std::chrono::high_resolution_clock::now();
 
     Writer writer;
-    writer.saveImages();
+    writer.SaveImages();
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;

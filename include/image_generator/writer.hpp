@@ -56,7 +56,7 @@ struct Pen {
     int x = 0; // X coordinate of the pen's position on the image.
     int y = 0; // Y coordinate of the pen's position on the image.
     
-    // TODO: make static and move to formatChar
+    // TODO: make static and move to FormatChar
     bool pendingEscape = false; // insert a backslash before a delimiter to treat it as a normal character.
 };
 
@@ -72,12 +72,12 @@ class Writer {
     // includeCredits: `true` to write quote's author and title in the bottom right of the image, `false` to discard.
     //
     // Returns a bitmap of the image as a byte buffer.
-    std::vector<unsigned char> generateQuoteImage(std::unordered_map<std::string, std::string> row, const bool& includeCredits);
+    std::vector<unsigned char> GenerateQuoteImage(std::unordered_map<std::string, std::string> row, const bool& includeCredits);
 
     // Saves all quote images to an `images/` directory.
     //
     // Each row in the CSV is parsed to create an image of each quote.
-    void saveImages();
+    void SaveImages();
 
 
     // Initalizes a stb font.
@@ -85,7 +85,7 @@ class Writer {
     // fontPath: File path to a TrueType or OpenType file.
     // outBuf: output parameter. A byte buffer of the font file. 
     // outFont: output parameter. A font profile used for font-related tasks, such as drawing a glyph.
-    void initFont(const std::string& fontPath, std::vector<unsigned char>& outBuf, stbtt_fontinfo& outFont) {
+    void InitFont(const std::string& fontPath, std::vector<unsigned char>& outBuf, stbtt_fontinfo& outFont) {
         std::ifstream fontStream(fontPath, std::ios::binary); // read the entire font file into a buffer
         if (!fontStream) {
             throw std::runtime_error("Failed to open font file: " + fontPath);
@@ -115,17 +115,17 @@ class Writer {
     //
     // image: Bitmap of the image to write on.
     // timestr: Optional substring within a quote that contains the time. Only passed in if the text being written is a quote.
-    void writeInBBox(std::vector<unsigned char>& image, std::unordered_map<std::string, std::string> row);
+    void WriteInBBox(std::vector<unsigned char>& image, std::unordered_map<std::string, std::string> row);
 
 
-    // A helper to `writeInBBox()` that wraps `Writer::text` with the timestring delimiter, or replaces it with an error message if the
+    // A helper to `WriteInBBox()` that wraps `Writer::text` with the timestring delimiter, or replaces it with an error message if the
     // timestring is missing or is not found in the quote.
     //
     // row: A row from the CSV file.
     // timestrBegin: output parameter. Index where the first time string delim is found in the text.
     // timestrEnd: output parameter. Index where the second (last) time string delim is found in the text.
     // text: output parameter. Wraps the quote's substring containing the timestring with the timestring delim, and an error message otherwise.
-    void wrapTimestring(std::unordered_map<std::string, std::string> row, std::string& text) {
+    void WrapTimestring(std::unordered_map<std::string, std::string> row, std::string& text) {
         size_t timestrBegin = 0, timestrEnd = 0;
         const std::string errMsg = std::format("Time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
 
@@ -151,7 +151,7 @@ class Writer {
     // image: Bitmap of the image to write on.
     // word: The word to be written.
     // isLast: `true` if the word is the last word of a line (to skip adding a space after the last word in a line)
-    void drawWord(std::vector<unsigned char>& image, std::string word, bool isLast);
+    void DrawWord(std::vector<unsigned char>& image, std::string word, bool isLast);
 
 
     // Finds the maximum possible pixel height that can be used for a given bounding box and determiens how the text
@@ -161,16 +161,16 @@ class Writer {
     //      If the text cannot fit (the optimal font scale is < `MIN_PIXEL_HEIGHT`), this stores an empty string.
     //
     // Returns the optimal font scale that is found, or -1 if the text cannot fit.
-    float findOptimalPixelHeight(std::string& wrappedLines);
+    float FindOptimalPixelHeight(std::string& wrappedLines);
 
 
-    // A helper to `findOptimalPixelHeight()` that Wraps text using a given font scale such that the text doesn't overflow past
+    // A helper to `FindOptimalPixelHeight()` that Wraps text using a given font scale such that the text doesn't overflow past
     // the rightmost x coordinate of the bbox.
     //
-    // pen: A temporary pen that is created and destroyed in `findOptimalPixelHeight()`.
+    // pen: A temporary pen that is created and destroyed in `FindOptimalPixelHeight()`.
     // 
     // Returns the text to be written with newline delimiters if it fits. Otherwise, an empty string is returned.
-    std::string wrapText(Pen& pen);
+    std::string WrapText(Pen& pen);
 
 
     // Determines which font and color should be used to write a character. If the character is a delimiter, an empty string is
@@ -181,28 +181,28 @@ class Writer {
     // `pendingEscape` should be true (since it is only true for escaping delimiters).
     //
     // Returns an empty string if `character` is a `CharacterDelimiter` or the escape character ("\\"). Otherwise `character` is returned. 
-    std::string formatChar(Pen& pen, std::string character);
+    std::string FormatChar(Pen& pen, std::string character);
 
 
-    // A helper to `wrapText()` that checks if a word needs to be moved onto a new line, either due to text wrapping
+    // A helper to `WrapText()` that checks if a word needs to be moved onto a new line, either due to text wrapping
     // (it doesn't fit on the current line) or custom formatting (contains one or more "\n").
     //
-    // pen: A temporary pen that is created and destroyed in `findOptimalPixelHeight()`.
+    // pen: A temporary pen that is created and destroyed in `FindOptimalPixelHeight()`.
     // word: The word to be formatted.
     // lines: The text to be written onto an image.
     // wordLength: The length of the word in pixels.
-    void formatWord(Pen& pen, std::string word, std::string& lines, const int& wordLength);
+    void FormatWord(Pen& pen, std::string word, std::string& lines, const int& wordLength);
 
 
     // Retrieves a Delimiter from `charDelimiters` using the passed in type.
-    Delimiter& getDelimiter(DelimiterType type) {
+    Delimiter& GetDelimiter(DelimiterType type) {
         return charDelimiters[static_cast<size_t>(type)];
     }
 
 
     // Finds which delimiter a character represents. If the character is not a delimiter,
     // a nullptr is returned.
-    Delimiter* findDelimiter(const std::string& character) {
+    Delimiter* FindDelimiter(const std::string& character) {
         for (auto& delim : charDelimiters) {
             if (delim.character == character) return &delim;
         }
@@ -211,13 +211,13 @@ class Writer {
 
 
     // Sets the count values in all delimiters to 0.
-    void resetDelimCount() {
+    void ResetDelimCount() {
         for (Delimiter& d : charDelimiters) { d.count = 0; }
     }
 
 
     // Moves the pen to some (x,y) coordinate.
-    void resetPen (int x_pos, int y_pos) {
+    void ResetPen (int x_pos, int y_pos) {
         pen.x = x_pos;
         pen.y = y_pos;
     }
@@ -247,7 +247,7 @@ class Writer {
     // line: A single line of text, with no newline characters.
     //
     // Returns the top-left Y coordinate of the tallest (most negative) glyph box, or 0 if the line is empty.
-    int maxAscender(const std::string& line);
+    int MaxAscender(const std::string& line);
 
 
     // Calculates a font's recommended distance between two lines of text (the vertical distance from one line's baseline to
@@ -258,7 +258,7 @@ class Writer {
     //
     // Returns the font's recommended pixel distance to increase the pen's Y coordinate by to move to the
     // next line.
-    int getLineHeight(const stbtt_fontinfo& font, const float& fontScale)
+    int GetLineHeight(const stbtt_fontinfo& font, const float& fontScale)
     {
         int ascent, descent, lineGap;
         stbtt_GetFontVMetrics(&font, &ascent, &descent, &lineGap);
@@ -272,18 +272,18 @@ class Writer {
     //
     // pen: 
     // line: A single line of text, one or more words long.
-    float getLineWidth(Pen& pen, const std::string& line);
+    float GetLineWidth(Pen& pen, const std::string& line);
 
 
     // Shrinks the credits bbox to fit tightly around its text, allowing the quote bbox to be enlarged and fill the blank space.
     //
     // Should be called after the optimal font scale for the credits text has been applied to `pen`, and after that text has been
-    // wrapped (see `findOptimalPixelHeight` / `wrapText`). Measures the actual rendered width & height of `wrappedLines`
+    // wrapped (see `FindOptimalPixelHeight` / `WrapText`). Measures the actual rendered width & height of `wrappedLines`
     // at the credits font scale and uses it to move the top-left corner of the credits bbox's inward so that the bbox's width and
     // height match the credits text's actual width and height.
     //
     // wrappedLines: The credits text, already wrapped with newline delimiters, measured at `pen`'s current font and font scale.
     //
     // Mutates: `bbox.topLeftX` and `bbox.topLeftY`, in place, on the calling Writer.
-    void resizeCreditBbox(const std::string& wrappedLines);
+    void ResizeCreditBbox(const std::string& wrappedLines);
 };

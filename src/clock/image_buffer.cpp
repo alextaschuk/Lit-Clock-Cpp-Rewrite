@@ -6,9 +6,9 @@
 
 #include "constants.hpp"
 
-void ImageBuffer::pushImage(const std::vector<unsigned char>& image)
+void ImageBuffer::PushImage(const std::vector<unsigned char>& image)
 {
-    if (isFull()) {
+    if (IsFull()) {
         throw std::runtime_error("Image buffer is full.");
     }
     
@@ -16,18 +16,18 @@ void ImageBuffer::pushImage(const std::vector<unsigned char>& image)
         throw std::runtime_error("Image size does not match expected IMAGE_SIZE_4BPP.");
     }
 
-    std::copy(image.begin(), image.end(), data.begin() + getWriteOffset());
+    std::copy(image.begin(), image.end(), data.begin() + GetWriteOffset());
     tail = (tail + 1) % MAX_IMAGES_TO_BUFFER;
     ++size;
 }
 
-uint8_t* ImageBuffer::popImage()
+uint8_t* ImageBuffer::PopImage()
 {
-    if (isEmpty()) {
+    if (IsEmpty()) {
         throw std::runtime_error("Image buffer is empty.");
     }
 
-    uint8_t* imagePointer = data.data() + getReadOffset();
+    uint8_t* imagePointer = data.data() + GetReadOffset();
     head = (head + 1) % MAX_IMAGES_TO_BUFFER;
     --size;
     return imagePointer;

@@ -50,7 +50,7 @@ class Horologium
             Paint_SetBitsPerPixel(BITS_PER_PIXEL);
             spdlog::info("Initial Waveshare screen config complete");
 
-            int numCachedQuotes = cacheQuotes();
+            int numCachedQuotes = CacheQuotes();
             if ( numCachedQuotes == -1) {
                 spdlog::critical("Failed to open CSV file containing clock's quotes.");
                 EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
@@ -61,11 +61,11 @@ class Horologium
             }
 
             try {
-                writer.initFont(projectPath("/share/fonts/Bookerly.ttf"), writer.fonts.regularBuf, writer.fonts.regular);
-                writer.initFont(projectPath("/share/fonts/Bookerly-Italic.ttf"), writer.fonts.italicBuf, writer.fonts.italic);
-                writer.initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), writer.fonts.boldBuf, writer.fonts.bold);
-                writer.initFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), writer.fonts.italicBoldBuf, writer.fonts.italicBold);
-                writer.initFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), writer.fonts.creditBuf, writer.fonts.credit);
+                writer.InitFont(projectPath("/share/fonts/Bookerly.ttf"), writer.fonts.regularBuf, writer.fonts.regular);
+                writer.InitFont(projectPath("/share/fonts/Bookerly-Italic.ttf"), writer.fonts.italicBuf, writer.fonts.italic);
+                writer.InitFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), writer.fonts.boldBuf, writer.fonts.bold);
+                writer.InitFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), writer.fonts.italicBoldBuf, writer.fonts.italicBold);
+                writer.InitFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), writer.fonts.creditBuf, writer.fonts.credit);
             } catch (const std::runtime_error) {
                 std::println("Error: Failed to initialize fonts.");
             }
@@ -87,64 +87,66 @@ class Horologium
         // Parses the CSV of quotes and store them in a vector.
         //
         // Returns the number of cached quotes, or -1 on failure.
-        int cacheQuotes();
+        int CacheQuotes();
 
-        // Advances the display by one minute: displays the image at the front of the buffer and refills the buffer.
+        // Advances the clock by one minute.
         // 
-        // Is intended be called at the 59th second of every minute by `main()`. At the top of every hour (e.g. 12:00), a 
-        // refresh is performed on the screen (all pixels are set to white) prior to displaying the next image. This helps 
-        // prevent ghosting.
-        void tick_forward();
+        // The image at the front of the buffer is displayed and popped, and and the buffer is refilled.
+        // 
+        // Is intended be called at the 57th second of every minute by in clock.cpp's loop in main(). At
+        // the top of every hour (e.g. 12:00), a full refresh is performed on the screen (all pixels are
+        // set to white) prior to displaying the next image. This helps prevent ghosting.
+        void TickClockForward();
 
         // Renders the image for the given time (hour:minute), converts it to 4bpp, and pushes it onto the buffer.
         //
         // hour: The hour (0-23) of the quote to render.
         // minute: The minute (0-60) of the quote to render.
-        void bufferImage(size_t hour, size_t minute);
+        void BufferImage(size_t hour, size_t minute);
 
         // Renders and buffers the image for the minute after quote that the buffer's `tail` is pointing to.
         void refreshBuffer();
 
         // Converts an image's 8bpp (bits per pixel) buffer to 4bpp and returns the new 4bpp buffer.
         //
-        // `Writer::generateQuoteImage()` returns a buffer for an image where each byte represents one pixel (thus,
+        // `Writer::GenerateQuoteImage()` returns a buffer for an image where each byte represents one pixel (thus,
         // the image has a grayscale range of 0-255). Waveshare recommends using 4bpp for refreshing (grayscale
         // range of 0-15) because " the amount of transmitted data is reduced by half, the transmission speed is
         // twice as fast, and there is no difference in display effect."
         //
         // image: A flat buffer of an 8bpp image to convert to 4bpp
-        std::vector<unsigned char> convertTo4bpp(const std::vector<unsigned char>& image);
+        std::vector<unsigned char> ConvertTo4Bpp(const std::vector<unsigned char>& image);
 
         // Pops the image from the front of the buffer (the image that the buffer's `head` is pointing to) and
         // displays it onto the screen.
-        void displayQuote();
+        void DisplayQuote();
 
-        // Chooses a random row from the quote cache for the given time (hour:minute) and returns the row's rendered image.
+        // Returns the rendered image of random row from the quote cache for the given time (hour:minute).
         //
         // quoteHour: The hour (0-23) of the quote to render.
         // quoteMin: The minute (0-59) of the quote to render.
         //
         // Returns a bitmap of the rendered image.
-        std::vector<unsigned char> getImage(const size_t& quoteHour, const size_t& quoteMin);
+        std::vector<unsigned char> GetImage(const size_t& quoteHour, const size_t& quoteMin);
         
         // Gets the current local hour and minute from the system clock.
         //
         // hour: output parameter. Set to the current local hour (0-23).
         // minute: output parameter. Set to the current local minute (0-59).
-        void getTime(size_t& hour, size_t& minute);
+        void GetTime(size_t& hour, size_t& minute);
         
         // Advances the given time (hour:minute) by one minute, wrapping at the top of the hour.
         //
         // hour: output parameter. The hour of the next minute (0-23).
         // minute: output parameter. The next minute (0-59).
-        void advanceTime(size_t& hour, size_t& minute);
+        void AdvanceTime(size_t& hour, size_t& minute);
 
         // Wakes the screen's controller. Call this before sending anything to the screen
         // (e.g. a refresh command or an image to display).
-        void Horologium::wakeScreen();
+        void WakeScreen();
 
         // Waits for the screen to finish refreshing, then puts its controller in low-power mode.
-        void Horologium::sleepScreen();
+        void SleepScreen();
 
         // Clears the screen, deactivates it, and shuts the clock down.
         //
@@ -152,7 +154,6 @@ class Horologium
         // with the clock.
         //
         // shutdownMsg: The reason for the shutdown to log.
-        // isCritical: Determines if errMsg is printed via spdlog::info() or
-        // spdlog::critical().
-        void clearAndExit(std::string shutdownMsg, bool isCritical);
+        // isCritical: Determines if errMsg is printed via spdlog::info() or spdlog::critical().
+        void ClearAndExit(std::string shutdownMsg, bool isCritical);
 };

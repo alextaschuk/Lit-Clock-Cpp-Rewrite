@@ -15,7 +15,7 @@ static Horologium* activeHorologium = nullptr;
 void Handler(int signo)
 {
     std::string msg = "Ctrl + C detected. Turning the clock off...";
-    activeHorologium->clearAndExit(msg, false);
+    activeHorologium->ClearAndExit(msg, false);
 }
 
 
@@ -30,13 +30,13 @@ void displayStartupMsg(Horologium& horologium)
         {"title", ""},
         {"author", ""},
     };
-    std::vector<unsigned char> startupImage8bpp = horologium.writer.generateQuoteImage(startupMessage, false);
-    std::vector<unsigned char> startupImage4bpp = horologium.convertTo4bpp(startupImage8bpp);
+    std::vector<unsigned char> startupImage8bpp = horologium.writer.GenerateQuoteImage(startupMessage, false);
+    std::vector<unsigned char> startupImage4bpp = horologium.ConvertTo4Bpp(startupImage8bpp);
     UBYTE* startupMsgPtr = startupImage4bpp.data();
 
-    horologium.wakeScreen();
+    horologium.WakeScreen();
     EPD_IT8951_4bp_Refresh(startupMsgPtr, 0, 0, horologium.Panel_Width, horologium.Panel_Height, false, horologium.Init_Target_Memory_Addr, false);
-    horologium.sleepScreen();
+    horologium.SleepScreen();
 
     spdlog::info("Startup image displayed.");
 }
@@ -46,23 +46,23 @@ void displayStartupMsg(Horologium& horologium)
 // The first quote is not buffered.
 void displayFirstImage(Horologium& horologium)
 {
-    horologium.getTime(horologium.bufferedHour, horologium.bufferedMinute);
-    std::vector<unsigned char> firstImage8bpp = horologium.getImage(horologium.bufferedHour, horologium.bufferedMinute);
-    std::vector<unsigned char> firstImage4bpp = horologium.convertTo4bpp(firstImage8bpp);
+    horologium.GetTime(horologium.bufferedHour, horologium.bufferedMinute);
+    std::vector<unsigned char> firstImage8bpp = horologium.GetImage(horologium.bufferedHour, horologium.bufferedMinute);
+    std::vector<unsigned char> firstImage4bpp = horologium.ConvertTo4Bpp(firstImage8bpp);
     UBYTE* firstQuotePtr = firstImage4bpp.data();
     
-    horologium.wakeScreen();
+    horologium.WakeScreen();
     EPD_IT8951_4bp_Refresh(firstQuotePtr, 0, 0, horologium.Panel_Width, horologium.Panel_Height, false, horologium.Init_Target_Memory_Addr, false);
-    horologium.sleepScreen();
-    
+    horologium.SleepScreen();
+
     spdlog::info("First quote displayed.");
 }
 
 
-// Determines how long the clock's loop in main() should sleep before the next call to tick_forward().
+// Determines how long the clock's loop in main() should sleep before the next call to TickClockForward().
 //
-// It takes ~3 seconds for tick_forward() to complete (most of this is for the screen to update with a
-// new image to display). So tick_forward() is called at the 57th second of every minute. It's possible
+// It takes ~3 seconds for TickClockForward() to complete (most of this is for the screen to update with a
+// new image to display). So TickClockForward() is called at the 57th second of every minute. It's possible
 // the function takes less than 3 seconds to return so we need to make sure that the loop sleeps until
 // the next 57th second.
 int sleepDuration(int currSecond)
@@ -110,7 +110,7 @@ int main()
         while(true)
         {
             spdlog::info("Displaying the next quote...");
-            horologium.tick_forward();
+            horologium.TickClockForward();
             
             // sleep until the 57th second of the current min (leave ~3 sec for processing time
             // to update the screen)
@@ -122,6 +122,6 @@ int main()
         }
     } catch (...) {
         std::string msg = "An error occurred for unknown reasons.";
-        horologium.clearAndExit(msg, true);
+        horologium.ClearAndExit(msg, true);
     }
 }
