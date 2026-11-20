@@ -167,9 +167,11 @@ void EPD_IT8951_LoadImgEnd(void);
 
 void EPD_IT8951_GetSystemInfo(void* Buf);
 void EPD_IT8951_SetTargetMemoryAddr(UDOUBLE Target_Memory_Addr);
+*/
+
 void EPD_IT8951_WaitForDisplayReady(void);
 
-
+/*
 void EPD_IT8951_HostAreaPackedPixelWrite_8bp(IT8951_Load_Img_Info*Load_Img_Info,IT8951_Area_Img_Info*Area_Img_Info);
 
 void EPD_IT8951_HostAreaPackedPixelWrite_1bp(IT8951_Load_Img_Info*Load_Img_Info,IT8951_Area_Img_Info*Area_Img_Info, bool Packed_Write);

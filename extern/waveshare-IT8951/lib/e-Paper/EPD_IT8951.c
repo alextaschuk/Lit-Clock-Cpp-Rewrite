@@ -374,10 +374,10 @@ static void EPD_IT8951_SetTargetMemoryAddr(UDOUBLE Target_Memory_Addr)
 
 
 /******************************************************************************
-function :	EPD_IT8951_WaitForDisplayReady
+function :	Waits for the display controller's engine to be idle.
 parameter:  
 ******************************************************************************/
-static void EPD_IT8951_WaitForDisplayReady(void)
+void EPD_IT8951_WaitForDisplayReady(void)
 {
     //Check IT8951 Register LUTAFSR => NonZero Busy, Zero - Free
     while( EPD_IT8951_ReadReg(LUTAFSR) )
