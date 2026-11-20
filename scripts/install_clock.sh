@@ -89,7 +89,7 @@ clone_and_install() {
         git -C "$repo_dir" submodule update --init --recursive \
             || bootstrap_fail "Could not download the clock's submodules into $repo_dir."
     else
-        echo "Downloading the clock into $repo_dir..."
+        echo "Downloading the clock..."
         git clone --recurse-submodules "$REPO_URL" "$repo_dir" \
             || bootstrap_fail "Could not download the clock from $REPO_URL."
     fi
@@ -109,6 +109,9 @@ clone_and_install() {
     exec bash "$repo_dir/scripts/install_clock.sh"
 }
 
+echo "┌──────────────────────────┐"
+echo "│Literary Quote Clock Setup│"
+echo "└──────────────────────────┘"
 
 # if the script was downloaded on its own, clone the repo and run the clone's copy of this script (which continues below)
 if ! is_inside_repo; then
@@ -135,10 +138,6 @@ source "$I_SCRIPT_DIR/lib/user_config.sh"
 
 main() {
     check_environment # common.sh
-
-    echo "┌──────────────────────────┐"
-    echo "│Literary Quote Clock Setup│"
-    echo "└──────────────────────────┘"
 
     # TODO: modify echo to automatically wrap text according to terminal width.
     echo -e "This script walks you through all of the necessary services install the clock, \nenable boot-time startup for the clock, \nand have it automatically update (e.g. receive new quotes)."
