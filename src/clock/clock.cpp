@@ -32,12 +32,8 @@ void displayStartupMsg(Horologium& horologium)
     };
     std::vector<unsigned char> startupImage8bpp = horologium.writer.GenerateQuoteImage(startupMessage, false);
     std::vector<unsigned char> startupImage4bpp = horologium.ConvertTo4Bpp(startupImage8bpp);
-    UBYTE* startupMsgPtr = startupImage4bpp.data();
-
-    horologium.WakeScreen();
-    EPD_IT8951_4bp_Refresh(startupMsgPtr, 0, 0, horologium.Panel_Width, horologium.Panel_Height, false, horologium.Init_Target_Memory_Addr, false);
-    horologium.SleepScreen();
-
+    
+    horologium.RefreshScreen(startupImage4bpp.data());
     spdlog::info("Startup image displayed.");
 }
 
@@ -49,12 +45,8 @@ void displayFirstImage(Horologium& horologium)
     horologium.GetTime(horologium.bufferedHour, horologium.bufferedMinute);
     std::vector<unsigned char> firstImage8bpp = horologium.GetImage(horologium.bufferedHour, horologium.bufferedMinute);
     std::vector<unsigned char> firstImage4bpp = horologium.ConvertTo4Bpp(firstImage8bpp);
-    UBYTE* firstQuotePtr = firstImage4bpp.data();
     
-    horologium.WakeScreen();
-    EPD_IT8951_4bp_Refresh(firstQuotePtr, 0, 0, horologium.Panel_Width, horologium.Panel_Height, false, horologium.Init_Target_Memory_Addr, false);
-    horologium.SleepScreen();
-
+    horologium.RefreshScreen(firstImage4bpp.data());
     spdlog::info("First quote displayed.");
 }
 

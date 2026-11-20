@@ -117,9 +117,14 @@ class Horologium
         // image: A flat buffer of an 8bpp image to convert to 4bpp
         std::vector<unsigned char> ConvertTo4Bpp(const std::vector<unsigned char>& image);
 
+        // Refresh the screen with a new image.
+        //
+        // img: A flat buffer of a 4bpp image to display on the screen.
+        void RefreshScreen(UBYTE* img);
+
         // Pops the image from the front of the buffer (the image that the buffer's `head` is pointing to) and
         // displays it onto the screen.
-        void DisplayQuote();
+        void DisplayQuoteFromBuffer();
 
         // Returns the rendered image of random row from the quote cache for the given time (hour:minute).
         //

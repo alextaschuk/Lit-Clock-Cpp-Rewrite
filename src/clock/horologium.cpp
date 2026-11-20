@@ -120,11 +120,18 @@ std::vector<unsigned char> Horologium::ConvertTo4Bpp(const std::vector<unsigned 
 }
 
 
-void Horologium::DisplayQuote()
+void Horologium::RefreshScreen(UBYTE* img)
+{
+    WakeScreen();
+    EPD_IT8951_4bp_Refresh(img, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr, false);
+    SleepScreen();
+}
+
+
+void Horologium::DisplayQuoteFromBuffer()
 {
     UBYTE* currentImagePtr = buffer.PopImage();
-    Paint_SelectImage(currentImagePtr);
-    EPD_IT8951_4bp_Refresh(currentImagePtr, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr, false);
+    RefreshScreen(currentImagePtr);
     spdlog::info("Displayed a new quote.");
 }
 
@@ -141,7 +148,7 @@ void Horologium::refreshBuffer()
 {
     AdvanceTime(bufferedHour,bufferedMinute);
     BufferImage(bufferedHour, bufferedMinute);
-    spdlog::info("Refreshed the buffer (a new image was added).");
+    spdlog::info("Refreshed the buffer with a new image");
 }
 
 
@@ -176,7 +183,7 @@ void Horologium::TickClockForward()
         EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, GC16_Mode);
     }
     
-    DisplayQuote();
+    DisplayQuoteFromBuffer();
     refreshBuffer();
     SleepScreen();
 }
