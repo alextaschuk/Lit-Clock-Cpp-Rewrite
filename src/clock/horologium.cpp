@@ -203,11 +203,8 @@ void Horologium::SleepScreen()
 
 
 void Horologium::ClearAndExit(std::string shutdownMsg, bool isCritical) {
-    if (isCritical)
-        spdlog::critical(shutdownMsg);
-    else
-        spdlog::info(shutdownMsg);
-
+    isCritical ? spdlog::critical(shutdownMsg) : spdlog::info(shutdownMsg);
+    
     WakeScreen();
     EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
 

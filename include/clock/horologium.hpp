@@ -28,34 +28,25 @@ class Horologium
     public:
         Horologium()
         {
-            if(DEV_Module_Init()!=0) {
+            if (DEV_Module_Init()!= 0) {
                 spdlog::critical("Error: Failed to initialize the BCM2835 hardware module.");
                 std::exit(1);
             }
 
             std::uint16_t VCOM_Scaled = static_cast<std::uint16_t>(std::round(std::abs(VCOM) * 1000.0));
-            Dev_Info = EPD_IT8951_Init(VCOM_Scaled);
 
+            Dev_Info = EPD_IT8951_Init(VCOM_Scaled);
             Panel_Width = Dev_Info.Panel_W; //TODO: use this instead of SCREEN WIDTH/ SCREEN HEIGHT 
             Panel_Height = Dev_Info.Panel_H;   
             Init_Target_Memory_Addr = Dev_Info.Memory_Addr_L | (Dev_Info.Memory_Addr_H << 16);
-            spdlog::info("EPD intialized");
-            EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
 
-            // waveshare screen config/setup
-            Paint_NewImage(buffer.data.data(), SCREEN_WIDTH, SCREEN_HEIGHT, 0, WHITE); // rotate=0, adjust WHITE per Waveshare's enum
-            Paint_SelectImage(buffer.data.data());
-            Paint_SetRotate(0); // ROTATE_0, per Waveshare.
-            Paint_SetMirroring(0); // MIRROR_NONE, per Waveshare.
-            Paint_SetBitsPerPixel(BITS_PER_PIXEL);
-            spdlog::info("Initial Waveshare screen config complete");
+            EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
+            spdlog::info("Waveshare EPD initialized.");
 
             int numCachedQuotes = CacheQuotes();
             if ( numCachedQuotes == -1) {
-                spdlog::critical("Failed to open CSV file containing clock's quotes.");
-                EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
-                DEV_Module_Exit();
-                exit(0);
+                std::string errMsg = "Failed to open CSV file containing clock's quotes. Exiting clock startup.";
+                ClearAndExit(errMsg, true)
             } else {
                 spdlog::info("Cached {0:d} quotes.", numCachedQuotes);
             }
@@ -67,7 +58,8 @@ class Horologium
                 writer.InitFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), writer.fonts.italicBoldBuf, writer.fonts.italicBold);
                 writer.InitFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), writer.fonts.creditBuf, writer.fonts.credit);
             } catch (const std::runtime_error) {
-                std::println("Error: Failed to initialize fonts.");
+                std::string errMsg = "Failed to initialize fonts. Exiting clock startup.";
+                ClearAndExit(errMsg, true);
             }
         }
 
@@ -159,6 +151,6 @@ class Horologium
         // with the clock.
         //
         // shutdownMsg: The reason for the shutdown to log.
-        // isCritical: Determines if errMsg is printed via spdlog::info() or spdlog::critical().
+        // isCritical: true to print errMsg via spdlog::critical(), or false to print via spdlog::info().
         void ClearAndExit(std::string shutdownMsg, bool isCritical);
 };
