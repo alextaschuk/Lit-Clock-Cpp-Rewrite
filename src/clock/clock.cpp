@@ -1,13 +1,21 @@
 #include "clock/horologium.hpp"
-
+#include "spdlog/spdlog.h"
 
 #include <chrono>
 #include <signal.h>
 #include <thread>
 
+// Should be nullptr until clock setup is done in main().
+// Necessary for Handler() to clear the screen on SIGINT.
+static Horologium* activeHorologium = nullptr;
+
+// Listens for SIGINT signal to wipe and deactivate the screen 
+// before shutting the clock down.
 void Handler(int signo)
 {
-    std::println("ctrl + c detected.");
+    spdlog::info("Ctrl + C detected. Turning the clock off...");
+    EPD_IT8951_Clear_Refresh(activeHorologium->Dev_Info, activeHorologium->Init_Target_Memory_Addr, INIT_Mode);
+    spdlog::info("Cleared the screen.");
     DEV_Module_Exit();
     exit(0);
 }
@@ -28,7 +36,7 @@ void displayStartupMsg(Horologium& horologium)
     std::vector<unsigned char> startupImage4bpp = horologium.convertTo4bpp(startupImage8bpp);
     UBYTE* startupMsgPtr = startupImage4bpp.data();
     EPD_IT8951_4bp_Refresh(startupMsgPtr, 0, 0, horologium.Panel_Width, horologium.Panel_Height, false, horologium.Init_Target_Memory_Addr, false);
-    spdlog::info("Displayed startup image");
+    spdlog::info("Startup image displayed.");
 }
 
 
@@ -40,8 +48,9 @@ void displayFirstImage(Horologium& horologium)
     std::vector<unsigned char> firstImage4bpp = horologium.convertTo4bpp(firstImage8bpp);
     UBYTE* firstQuotePtr = firstImage4bpp.data();
     EPD_IT8951_4bp_Refresh(firstQuotePtr, 0, 0, horologium.Panel_Width, horologium.Panel_Height, false, horologium.Init_Target_Memory_Addr, false);
-    spdlog::info("Displayed first quote");
+    spdlog::info("First quote displayed.");
 }
+
 
 // Determines how long the clock's loop in main() should sleep before the next call to tick_forward().
 //
@@ -60,21 +69,22 @@ int sleepDuration(int currSecond)
 
 int main()
 {
-    //Exception handling:ctrl + c
-    signal(SIGINT, Handler);
-
     Horologium horologium;
+    activeHorologium = &horologium;
+
+    signal(SIGINT, Handler); // Exception handling for ctrl + c
+
     displayStartupMsg(horologium);
 
-    spdlog::info("Sleeping for 30 sec to let the RTC update");
+    spdlog::info("Sleeping for 30 sec to let the RPi's internal clock update");
     std::this_thread::sleep_for(std::chrono::seconds(30));
+    spdlog::info("Woke up. The RPi's clock should be synced.");
     
     displayFirstImage(horologium);
     
     // initialize the buffer
-    for (int i = 0; i < MAX_IMAGES_TO_BUFFER; i++) {
+    for (int i = 0; i < MAX_IMAGES_TO_BUFFER; i++)
         horologium.refreshBuffer();
-    }
     spdlog::info("Image buffer initialized");
 
     // sleep until we're ready to start using the buffer
@@ -88,21 +98,21 @@ int main()
     try {
         while(true)
         {
+            spdlog::info("Displaying the next quote...");
             horologium.tick_forward();
             
             // sleep until the 57th second of the current min (leave ~3 sec for processing time
-            // to change image on the screen)
+            // to update the screen)
             std::time_t t = std::time(nullptr);
             std::tm* localTime = std::localtime(&t);
             int currSecond = localTime->tm_sec;
-            //spdlog::info("going to sleep for {} seconds", 57 - currSecond);
+
             std::this_thread::sleep_for(std::chrono::seconds(sleepDuration(currSecond)));
-            spdlog::info("woke up to display next quote.");
         }
     } catch (...)
     {
-        std::println("error");
-        Paint_Clear(0xFF); //TODO: fix to actually clear screen
+        spdlog::critical("An error occurred for unknown reasons.");
+        EPD_IT8951_Clear_Refresh(horologium.Dev_Info, horologium.Init_Target_Memory_Addr, GC16_Mode);
         exit(0);
     }
 }
