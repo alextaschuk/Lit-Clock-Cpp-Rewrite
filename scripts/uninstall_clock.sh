@@ -24,17 +24,17 @@ source "$U_SCRIPT_DIR/lib/services.sh"
 ##################################################
 check_uninstall_environment() {
     if [[ "$EUID" -eq 0 ]]; then
-        fatal "Run this script as your regular user, without sudo."
+        fatal 0 "Run this script as your regular user, without sudo."
         exit 1
     fi
 
     if [[ -z "$ROOT" || "$ROOT" == "/" || "$ROOT" == "$HOME" ]]; then
-        fatal "Refusing to uninstall: $ROOT is not the clock's folder."
+        fatal 0 "Refusing to uninstall: $ROOT is not the clock's folder."
         exit 1
     fi
 
     if [[ ! -f "$CMAKE_FILE" || ! -f "$CONSTANTS_FILE" || ! -f "$SCRIPTS_DIR/uninstall_clock.sh" ]]; then
-        fatal "Refusing to uninstall: $ROOT does not look like the clock's folder."
+        fatal 0 "Refusing to uninstall: $ROOT does not look like the clock's folder."
         exit 1
     fi
 }

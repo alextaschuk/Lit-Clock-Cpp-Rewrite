@@ -51,7 +51,7 @@ require_tools() {
     done
 
     if (( ${#missing[@]} > 0 )); then
-        fatal "Missing required tools: ${missing[*]}. Install them with: sudo apt install ${missing[*]}"
+        fatal 0 "Missing required tools: ${missing[*]}. Install them with: sudo apt install ${missing[*]}"
         exit 1
     fi
 }
@@ -64,7 +64,7 @@ require_tools() {
 ##################################################
 check_environment() {
     if [[ "$EUID" -eq 0 ]]; then
-        fatal "Run this script as your regular user, without sudo."
+        fatal 0 "Run this script as your regular user, without sudo."
         exit 1
     fi
 
@@ -78,7 +78,7 @@ check_environment() {
     done
 
     if (( ${#missing_files[@]} > 0 )); then
-        fatal "Missing required files: ${missing_files[*]}. Manually download them, or re-clone the repository."
+        fatal 0 "Missing required files: ${missing_files[*]}. Manually download them, or re-clone the repository."
         exit 1
     fi
 
@@ -90,12 +90,12 @@ check_environment() {
     gxx_version="$(g++ -dumpversion)"
     gxx_version="${gxx_version%%.*}" # keep the major version only
     if [[ ! "$gxx_version" =~ ^[0-9]+$ ]] || (( gxx_version < min_gxx_version )); then
-        fatal "g++ $min_gxx_version or newer is needed to compile the clock, but this system has g++ ${gxx_version:-unknown}."
+        fatal 0 "g++ $min_gxx_version or newer is needed to compile the clock, but this system has g++ ${gxx_version:-unknown}."
         exit 1
     fi
 
     if [[ ! -f "$ROOT/extern/spdlog/CMakeLists.txt" ]]; then
-        fatal "The spdlog submodule is missing. Run this from $ROOT, then run the install script again: git submodule update --init"
+        fatal 0 "The spdlog submodule is missing. Run this from $ROOT, then run the install script again: git submodule update --init"
         exit 1
     fi
 

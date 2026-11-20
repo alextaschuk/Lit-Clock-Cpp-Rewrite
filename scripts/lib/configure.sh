@@ -9,7 +9,7 @@
 ##################################################
 set_VCOM() {
     if ! grep -qE '^[[:space:]]*inline constexpr double VCOM' "$CONSTANTS_FILE"; then
-        warn "VCOM declaration not found in constants.hpp."
+        warn 0 "VCOM declaration not found in constants.hpp."
         return 1
     fi
 
@@ -18,7 +18,7 @@ set_VCOM() {
     "$CONSTANTS_FILE"
 
     grep -Eq "VCOM[[:space:]]*=[[:space:]]*${VCOM};" "$CONSTANTS_FILE" \
-    || { fatal "Failed to set VCOM in constants.hpp"; exit 1; }
+    || { fatal 0 "Failed to set VCOM in constants.hpp"; exit 1; }
 
     echo "Set VCOM value in constants.hpp to $VCOM."
 }
@@ -30,7 +30,7 @@ set_VCOM() {
 ##################################################
 set_INCLUDE_CREDITS() {
     if ! grep -qE '^[[:space:]]*inline constexpr bool INCLUDE_CREDITS' "$CONSTANTS_FILE"; then
-        warn "INCLUDE_CREDITS declaration not found in constants.hpp."
+        warn 0 "INCLUDE_CREDITS declaration not found in constants.hpp."
         return 1
     fi
 
@@ -39,7 +39,7 @@ set_INCLUDE_CREDITS() {
     "$CONSTANTS_FILE"
 
     grep -Eq "INCLUDE_CREDITS[[:space:]]*=[[:space:]]*${INCLUDE_CREDITS};" "$CONSTANTS_FILE" \
-    || { fatal "Failed to set INCLUDE_CREDITS in constants.hpp"; exit 1; }
+    || { fatal 0 "Failed to set INCLUDE_CREDITS in constants.hpp"; exit 1; }
 
     echo "Set INCLUDE_CREDITS value in constants.hpp to $INCLUDE_CREDITS."
 }
@@ -63,7 +63,7 @@ generate_build_files() {
     case "$MODEL_SELECTION" in
         1) gpio_backend=BCM2835 ;; # configure CMAKE for RPi <= 4
         2) gpio_backend=LGPIO ;; # configure CMAKE for RPi >= 5
-        *) fatal "Invalid Raspberry Pi model selection: $MODEL_SELECTION"; exit 1 ;;
+        *) fatal 0 "Invalid Raspberry Pi model selection: $MODEL_SELECTION"; exit 1 ;;
     esac
 
     cmake -S "$ROOT" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -DBUILD_CLOCK=ON -DGPIO_BACKEND="$gpio_backend"

@@ -44,7 +44,7 @@ remove_clock_cron_job() {
     current_crontab="$(crontab -l 2>/dev/null || true)"
 
     if ! printf '%s\n' "$current_crontab" | grep -Fq "$UPDATE_SCRIPT"; then
-        warn "Auto-update cron job not found. Moving on..."
+        warn 1 "Auto-update cron job not found. Moving on..."
         return 0
     fi
 

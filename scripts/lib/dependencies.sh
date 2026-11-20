@@ -49,7 +49,7 @@ install_bcm2835() {
             mkdir -p "$lib_dir" &&
             wget -q --show-progress -O "$download_dir/$archive" "$download_url" &&
             tar -xzf "$download_dir/$archive" -C "$lib_dir" --strip-components=1
-        ) || { fatal "Failed to download bcm2835." >&2; return 1; }
+        ) || { fatal 0 "Failed to download bcm2835." >&2; return 1; }
     fi
 
     echo "Installing bcm2835 library..."
@@ -57,9 +57,9 @@ install_bcm2835() {
         cd "$lib_dir" &&
         ./configure &&
         make -j"$(nproc)" &&
-        { sudo make check || warn "bcm2835's self-test failed. Installing it anyway." >&2; } &&
+        { sudo make check || warn 0 "bcm2835's self-test failed. Installing it anyway." >&2; } &&
         sudo make install
-    ) || { fatal "Failed to build/install bcm2835." >&2; return 1; }
+    ) || { fatal 0 "Failed to build/install bcm2835." >&2; return 1; }
 
     touch "$lib_dir/$INSTALLED_BY_CLOCK_MARKER" # remove system-wide installation in uninstall script
 }
@@ -195,7 +195,7 @@ install_dependencies() {
             install_lg
             ;;
         *)
-            error "Invalid Raspberry Pi model selection: $MODEL_SELECTION"
+            error 0 "Invalid Raspberry Pi model selection: $MODEL_SELECTION"
             ;;
     esac
 

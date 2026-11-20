@@ -19,7 +19,7 @@ get_pi_model() {
     echo ""
 
     if [[ -z "$PI_MODEL" ]]; then
-        warn "Unable to detect your Pi's model."
+        warn 0 "Unable to detect your Pi's model."
         MODEL_CONFIRM="N"
     else
         echo "It looks like you have a $PI_MODEL"
@@ -43,7 +43,7 @@ get_pi_model() {
             elif [[ "$PI_MODEL" =~ Raspberry\ Pi\ [1-4] ]]; then
                 MODEL_SELECTION=1
             else
-                warn "Unable to identify a supported Raspberry Pi model."
+                warn 0 "Unable to identify a supported Raspberry Pi model."
                 MODEL_CONFIRM="N"
             fi
             ;;&
@@ -61,7 +61,7 @@ get_pi_model() {
                     break
                 fi
 
-                error "Invalid selection. Please enter 1 or 2."
+                error 0 "Invalid selection. Please enter 1 or 2."
             done
             ;;
     esac
@@ -79,7 +79,7 @@ get_VCOM() {
             break
         fi
 
-        error "Invalid VCOM value. Try again."
+        error 0 "Invalid VCOM value. Try again."
     done
 }
 
@@ -101,7 +101,7 @@ get_INCLUDE_CREDITS () {
                 break
                 ;;
             *)
-                error "Invalid input. Please enter Y or N."
+                error 0 "Invalid input. Please enter Y or N."
                 ;;
         esac
     done

@@ -8,17 +8,14 @@
 #   1. Download the script (e.g. via curl). This
 #   clones the clock's repo and runs the copy
 #   of this script inside the clone.
+#      - bash install_clock.sh [parent_dir]
 #
-#    bash install_clock.sh [parent_dir]
-#
-#   The repo is cloned into
-#   parent_dir/Lit-Clock-Cpp-Rewrite. If no folder
-#   is given, the current folder is used.
+#   The repo is cloned into parent_dir/Lit-Clock-Cpp-Rewrite.
+#   If no folder is given, the current folder is used.
 #
 #   2. Run the script inside an existing clone of
 #   of the repo.
-#
-#    bash scripts/install_clock.sh
+#       - bash scripts/install_clock.sh
 ##################################################
 
 
@@ -26,7 +23,6 @@ set -euo pipefail
 
 REPO_URL="https://github.com/alextaschuk/Lit-Clock-Cpp-Rewrite.git"
 REPO_NAME="Lit-Clock-Cpp-Rewrite"
-
 
 # BASH_SOURCE is empty when the script is piped into bash after downloading it, so it should
 # fall back to the current folder by default.
@@ -112,6 +108,7 @@ clone_and_install() {
 echo "┌──────────────────────────┐"
 echo "│Literary Quote Clock Setup│"
 echo "└──────────────────────────┘"
+echo -e "This script walks you through all of the necessary services install the clock, \nenable boot-time startup for the clock, \nand have it automatically update (e.g. receive new quotes)."
 
 # if the script was downloaded on its own, clone the repo and run the clone's copy of this script (which continues below)
 if ! is_inside_repo; then
@@ -139,8 +136,7 @@ source "$I_SCRIPT_DIR/lib/user_config.sh"
 main() {
     check_environment # common.sh
 
-    # TODO: modify echo to automatically wrap text according to terminal width.
-    echo -e "This script walks you through all of the necessary services install the clock, \nenable boot-time startup for the clock, \nand have it automatically update (e.g. receive new quotes)."
+
 
     get_user_config             # user_config.sh
     install_dependencies        # dependencies.sh

@@ -30,7 +30,7 @@ escape_sed_replacement() {
 ##################################################
 install_build_service() {
     if [[ ! -f "$BUILD_SERVICE" ]]; then
-        fatal "$BUILD_SERVICE not found in $SCRIPTS_DIR."
+        fatal 0 "$BUILD_SERVICE not found in $SCRIPTS_DIR."
         exit 1
     fi
 
@@ -57,7 +57,7 @@ install_build_service() {
 ##################################################
 install_clock_service() {
     if [[ ! -f "$CLOCK_SERVICE" ]]; then
-        fatal "$CLOCK_SERVICE not found in $SCRIPTS_DIR."
+        fatal 0 "$CLOCK_SERVICE not found in $SCRIPTS_DIR."
         exit 1
     fi
 
@@ -108,7 +108,7 @@ uninstall_systemd_services() {
         service_file="/etc/systemd/system/$service"
 
         if [[ ! -f "$service_file" ]]; then
-            warn "$service is not installed. Moving on..."
+            warn 0 "$service is not installed. Moving on..."
             continue
         fi
 

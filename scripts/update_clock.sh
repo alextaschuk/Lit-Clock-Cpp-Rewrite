@@ -33,9 +33,9 @@ echo "└───────────────────────�
 # if unsuccessful.
 ##################################################
 restart_pi() {
-    log "Update complete. Restarting the Pi..."
+    log 1 "Update complete. Restarting the Pi..."
     if ! sudo -n shutdown -r now; then
-        warn "Update completed, but restart failed (passwordless sudo should be set up for shutdown)" >&2
+        warn 1 "Update completed, but restart failed (passwordless sudo should be set up for shutdown)" >&2
         return 1
     fi
 }
@@ -52,14 +52,14 @@ restart_pi() {
 ##################################################
 check_remote_repo() {
     REPO_UPDATED=false
-    log "Attempting to pull from remote repo..."
+    log 1 "Attempting to pull from remote repo..."
 
     local constants_changed=false
     local constants_was_staged=false
     local constants_backup=""
     
     if ! git -C "$REPO_DIR" diff --quiet HEAD -- "$CONSTANTS_FILE"; then
-        log "Temporarily stashing local constants.hpp changes."
+        log 1 "Temporarily stashing local constants.hpp changes."
 
         constants_backup="$(mktemp)"
         cp "$CONSTANTS_FILE" "$constants_backup"
@@ -118,7 +118,7 @@ main() {
     if [[ "$REPO_UPDATED" == true || "$CSV_UPDATED" == true ]]; then
         restart_pi
     else
-        log "No updates to the remote repo or the CSV, so a restart isn't required."
+        log 1 "No updates to the remote repo or the CSV, so a restart isn't required."
     fi
 }
 

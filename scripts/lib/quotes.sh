@@ -50,7 +50,7 @@ process_quotes() {
 # repo and store it in REMOTE_SHA.
 ##################################################
 get_remote_csv_hash() {
-    log "Checking the remote CSV version of Python Clock..."
+    log 1 "Checking the remote CSV version of Python Clock..."
 
     local response=""
     REMOTE_SHA=""
@@ -109,14 +109,14 @@ update_csv() {
     LOCAL_SHA=$(cat "$SHA_FILE" 2>/dev/null || true)
 
     if [[ "$REMOTE_SHA" != "$LOCAL_SHA" ]]; then
-        log "CSV changed since last check. Downloading new version..."
+        log 1 "CSV changed since last check. Downloading new version..."
         CSV_UPDATED=true
 
         download_quotes_csv
 
         echo "$REMOTE_SHA" > "$SHA_FILE"
-        log "Successfully updated the CSV."
+        log 1 "Successfully updated the CSV."
     else
-        log "No changes to the CSV."
+        log 1 "No changes to the CSV."
     fi
 }
