@@ -20,11 +20,14 @@ create_clock_cron_job() {
     CRON_JOB="0 4 * * * bash \"$UPDATE_SCRIPT\" >> \"$LOG_FILE\" 2>&1"
     CURRENT_CRONTAB="$(crontab -l 2>/dev/null || true)"
 
+    touch "$LOG_FILE"
+
     if printf '%s\n' "$CURRENT_CRONTAB" | grep -Fq "$UPDATE_SCRIPT"; then
         echo "Auto-update cron job already exists."
     else
         printf '%s\n%s\n' "$CURRENT_CRONTAB" "$CRON_JOB" | crontab -
-        echo "The clock's auto-update script has been configured to run daily at 4:00 A.M. Logs are stored at $LOG_FILE."
+        echo "The clock's auto-update script has been configured to run daily at 4:00 A.M."
+        echo "  -Logs are stored at $LOG_FILE."
     fi
 }
 

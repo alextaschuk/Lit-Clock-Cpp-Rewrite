@@ -46,6 +46,7 @@ print_banner() {
     echo "  - Download the clock."
     echo "  - Walk you through all of the necessary configuration to install the clock."
     echo "  - Enable boot-time startup and automatic updates (e.g. receive new quotes) for the clock."
+    echo""
 }
 
 

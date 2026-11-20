@@ -57,7 +57,7 @@ update_constants() {
 # Generate the Clock's build files.
 ##################################################
 generate_build_files() {
-    echo "Generating build files..."
+    echo -e "Generating build files...\n"
     local gpio_backend
 
     case "$MODEL_SELECTION" in
@@ -79,6 +79,7 @@ generate_build_files() {
 # in systemd's journal.
 ##################################################
 build_clock() {
+    echo ""
     echo "Building the clock (this make take a moment)..."
     cmake --build "$BUILD_DIR"
 }

@@ -84,7 +84,7 @@ install_clock_service() {
 ##################################################
 install_systemd_services() {
     echo ""
-    echo "Enabling boot-time startup for the clock and starting the clock (this may take a minute)..."
+    echo "Enabling boot-time startup for the clock and starting the clock..."
     install_build_service
     install_clock_service
 }

@@ -23,8 +23,7 @@ download_quotes_csv() (
 
     mv "$temp_csv" "$SHARE_DIR/quotes.csv"
 
-    echo "Downloaded quotes.csv from the Python Clock's remote repo..."
-    echo ""
+    echo "Downloaded quotes.csv from the Python Clock's remote repo."
 )
 
 ##################################################
@@ -50,6 +49,7 @@ process_quotes() {
 # repo and store it in REMOTE_SHA.
 ##################################################
 get_remote_csv_hash() {
+    echo ""
     log 1 "Checking the remote CSV version of Python Clock..."
 
     local response=""
