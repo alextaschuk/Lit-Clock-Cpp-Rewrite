@@ -110,11 +110,17 @@ check_remote_repo() {
 }
 
 
-check_remote_repo
-update_csv
 
-if [[ "$REPO_UPDATED" == true || "$CSV_UPDATED" == true ]]; then
-    restart_pi
-else
-    log "No updates to the remote repo or the CSV, so a restart isn't required."
-fi
+main() {
+    check_remote_repo
+    update_csv
+
+    if [[ "$REPO_UPDATED" == true || "$CSV_UPDATED" == true ]]; then
+        restart_pi
+    else
+        log "No updates to the remote repo or the CSV, so a restart isn't required."
+    fi
+}
+
+main "$@"
+exit 0
