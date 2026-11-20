@@ -28,6 +28,17 @@ REPO_NAME="Lit-Clock-Cpp-Rewrite"
 # fall back to the current folder by default.
 I_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" && pwd)" # path to this file
 
+
+##################################################
+# Log an error and exit. Used before log.sh is
+# available.
+##################################################
+bootstrap_fail() {
+    echo "Error: $*" >&2
+    exit 1
+}
+
+
 ##################################################
 # Print the install's banner. It is skipped when a
 # downloaded copy of this script has handed over
@@ -43,10 +54,45 @@ print_banner() {
     echo "│Literary Quote Clock Setup│"
     echo "└──────────────────────────┘"
     echo "This script will:"
-    echo "  - Download the clock."
+    echo "  - Download the clock (if necessary)."
     echo "  - Walk you through all of the necessary configuration to install the clock."
     echo "  - Enable boot-time startup and automatic updates (e.g. receive new quotes) for the clock."
     echo""
+
+    # Prompt the user on whether they want to proceed with the install.
+    # If they say no, exit the script without modifying their system.
+    local input_fd=0
+    if [[ ! -t 0 ]] && { : < /dev/tty; } 2>/dev/null; then
+        exec 3< /dev/tty
+        input_fd=3
+    elif [[ ! -t 0 && -z "${BASH_SOURCE[0]:-}" ]]; then
+        bootstrap_fail "There is no terminal to ask for confirmation. Download the script first, then run it with: bash install_clock.sh"
+    fi
+
+    local answer
+    while true; do
+        if ! read -r -p "Proceed? [Y/N]: " answer <&"$input_fd"; then
+            echo ""
+            bootstrap_fail "No answer was given."
+        fi
+
+        case "$answer" in
+            [yY]|[yY][eE][sS])
+                break
+                ;;
+            [nN]|[nN][oO])
+                echo "Install cancelled."
+                exit 0
+                ;;
+            *)
+                echo "Invalid input. Please enter Y or N."
+                ;;
+        esac
+    done
+
+    if (( input_fd == 3 )); then
+        exec 3<&-
+    fi
 }
 
 
@@ -56,16 +102,6 @@ print_banner() {
 ##################################################
 is_inside_repo() {
     [[ -f "$I_SCRIPT_DIR/../src/clock/horologium.cpp" && -f "$I_SCRIPT_DIR/../CMakeLists.txt" ]]
-}
-
-
-##################################################
-# Log an error and exit. Used before log.sh is
-# available.
-##################################################
-bootstrap_fail() {
-    echo "Error: $*" >&2
-    exit 1
 }
 
 
