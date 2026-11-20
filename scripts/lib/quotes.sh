@@ -12,9 +12,6 @@
 # Should be called in install_clock.sh.
 ##################################################
 download_quotes_csv() (
-    echo ""
-    echo "Downloading quotes.csv from the Python Clock's remote repo..."
-
     local temp_csv
 
     temp_csv="$(mktemp "$SHARE_DIR/quotes.csv.tmp.XXXXXX")"
@@ -25,6 +22,9 @@ download_quotes_csv() (
     process_quotes "$temp_csv"
 
     mv "$temp_csv" "$SHARE_DIR/quotes.csv"
+
+    echo "Downloaded quotes.csv from the Python Clock's remote repo..."
+    echo ""
 )
 
 ##################################################

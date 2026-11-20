@@ -68,8 +68,8 @@ install_bcm2835() {
 ##################################################
 # Removes the system-wide bcm2835 library.
 #
-# This function should only be called if a 
-# .installed_by_clock file is present at
+# This function should uninstall bcm2835 only
+# when a .installed_by_clock file is present at
 # extern/bcm2835/.
 ##################################################
 uninstall_bcm2835() {
@@ -139,8 +139,9 @@ install_lg() {
 ##################################################
 # Removes the system-wide lg library.
 #
-# This function should only be called if a 
-# .installed_by_clock file is present at extern/lg/
+# This function should uninstall lg only when if a
+# .installed_by_clock file is present at
+# extern/lg/.
 ##################################################
 uninstall_lg() {
     local lib_dir="$EXTERN_DIR/lg-master"
