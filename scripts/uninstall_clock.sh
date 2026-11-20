@@ -95,9 +95,9 @@ delete_clock_dir() {
 main() {
     check_uninstall_environment
 
-    echo "┌────────────────────────────┐"
-    echo "│Literary Quote Clock Install│"
-    echo "└────────────────────────────┘"
+    echo "┌──────────────────────────────┐"
+    echo "│Literary Quote Clock Uninstall│"
+    echo "└──────────────────────────────┘"
 
     confirm_uninstall
 
@@ -109,7 +109,7 @@ main() {
     delete_clock_dir
 
     echo ""
-    echo "Clock uninstall complete. To reinstall, visit https://github.com/alextaschuk/Lit-Clock-Cpp-Rewrite"
+    echo "Clock uninstall complete. To reinstall, visit https://github.com/alextaschuk/Lit-Clock-Cpp-Rewrite."
 }
 
 main "$@"
