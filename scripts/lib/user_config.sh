@@ -43,7 +43,7 @@ get_pi_model() {
             elif [[ "$PI_MODEL" =~ Raspberry\ Pi\ [1-4] ]]; then
                 MODEL_SELECTION=1
             else
-                warn 0 "Unable to identify a supported Raspberry Pi model."
+                warn "Unable to identify a supported Raspberry Pi model."
                 MODEL_CONFIRM="N"
             fi
             ;;&
