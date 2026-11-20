@@ -28,6 +28,26 @@ REPO_NAME="Lit-Clock-Cpp-Rewrite"
 # fall back to the current folder by default.
 I_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" && pwd)" # path to this file
 
+##################################################
+# Print the install's banner. It is skipped when a
+# downloaded copy of this script has handed over
+# to the clone's copy, since the downloaded copy
+# already printed it.
+##################################################
+print_banner() {
+    if [[ -n "${CLOCK_BANNER_SHOWN:-}" ]]; then
+        return 0
+    fi
+    
+    echo "┌──────────────────────────┐"
+    echo "│Literary Quote Clock Setup│"
+    echo "└──────────────────────────┘"
+    echo "This script will:"
+    echo "  - Download the clock."
+    echo "  - Walk you through all of the necessary configuration to install the clock."
+    echo "  - Enable boot-time startup and automatic updates (e.g. receive new quotes) for the clock."
+}
+
 
 ##################################################
 # Checks whether the script is running from
@@ -98,6 +118,8 @@ clone_and_install() {
         echo "Deleted the downloaded install script. To run the install again, use: bash $repo_dir/scripts/install_clock.sh"
     fi
 
+    export CLOCK_BANNER_SHOWN=1 # the clone's copy of this script shouldn't print the install banner
+
     # if the script is piped into bash, its input is the pipe instead, so the terminal is used
     if [[ ! -t 0 ]] && { : < /dev/tty; } 2>/dev/null; then
         exec bash "$repo_dir/scripts/install_clock.sh" < /dev/tty
@@ -105,10 +127,7 @@ clone_and_install() {
     exec bash "$repo_dir/scripts/install_clock.sh"
 }
 
-echo "┌──────────────────────────┐"
-echo "│Literary Quote Clock Setup│"
-echo "└──────────────────────────┘"
-echo -e "This script walks you through all of the necessary services install the clock, \nenable boot-time startup for the clock, \nand have it automatically update (e.g. receive new quotes)."
+print_banner
 
 # if the script was downloaded on its own, clone the repo and run the clone's copy of this script (which continues below)
 if ! is_inside_repo; then
@@ -146,7 +165,7 @@ main() {
     install_systemd_services    # services.sh
 
     echo ""
-    echo "Clock setup complete."
+    echo "Clock setup complete. To uninstall, run bash scripts/uninstall_clock.sh. For more information, visit https://github.com/alextaschuk/Lit-Clock-Cpp-Rewrite."
 }
 
 main "$@"
