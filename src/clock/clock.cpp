@@ -9,6 +9,7 @@
 // Necessary for Handler() to clear the screen on SIGINT.
 static Horologium* activeHorologium = nullptr;
 
+
 // Listens for SIGINT signal to wipe and deactivate the screen 
 // before shutting the clock down.
 void Handler(int signo)
@@ -18,7 +19,7 @@ void Handler(int signo)
 }
 
 
-// Displays a message while the clock waits for the Pi to update its RTC.
+// Displays a message while the clock waits for the Pi to update its internal clock.
 void displayStartupMsg(Horologium& horologium)
 {
     std::unordered_map<std::string, std::string> startupMessage = 
@@ -32,12 +33,16 @@ void displayStartupMsg(Horologium& horologium)
     std::vector<unsigned char> startupImage8bpp = horologium.writer.generateQuoteImage(startupMessage, false);
     std::vector<unsigned char> startupImage4bpp = horologium.convertTo4bpp(startupImage8bpp);
     UBYTE* startupMsgPtr = startupImage4bpp.data();
+
+    horologium.wakeScreen();
     EPD_IT8951_4bp_Refresh(startupMsgPtr, 0, 0, horologium.Panel_Width, horologium.Panel_Height, false, horologium.Init_Target_Memory_Addr, false);
+    horologium.sleepScreen();
+
     spdlog::info("Startup image displayed.");
 }
 
 
-// Displays the first quote after the Pi's RTC has updated.
+// Displays the first quote after the Pi's internal clock has updated.
 // The first quote is not buffered.
 void displayFirstImage(Horologium& horologium)
 {
@@ -45,7 +50,11 @@ void displayFirstImage(Horologium& horologium)
     std::vector<unsigned char> firstImage8bpp = horologium.getImage(horologium.bufferedHour, horologium.bufferedMinute);
     std::vector<unsigned char> firstImage4bpp = horologium.convertTo4bpp(firstImage8bpp);
     UBYTE* firstQuotePtr = firstImage4bpp.data();
+    
+    horologium.wakeScreen();
     EPD_IT8951_4bp_Refresh(firstQuotePtr, 0, 0, horologium.Panel_Width, horologium.Panel_Height, false, horologium.Init_Target_Memory_Addr, false);
+    horologium.sleepScreen();
+    
     spdlog::info("First quote displayed.");
 }
 
@@ -65,6 +74,8 @@ int sleepDuration(int currSecond)
 }
 
 
+// Creates the clock's Horologium object, and runs the 
+// clock's loop indefinitely to display quotes.
 int main()
 {
     Horologium horologium;
@@ -72,11 +83,13 @@ int main()
 
     signal(SIGINT, Handler); // Exception handling for ctrl + c
 
+
     displayStartupMsg(horologium);
 
     spdlog::info("Sleeping for 30 sec to let the RPi's internal clock update");
     std::this_thread::sleep_for(std::chrono::seconds(30));
     spdlog::info("Woke up. The RPi's clock should be synced.");
+    
     
     displayFirstImage(horologium);
     

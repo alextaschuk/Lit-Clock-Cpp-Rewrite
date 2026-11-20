@@ -139,6 +139,13 @@ class Horologium
         // minute: output parameter. The next minute (0-59).
         void advanceTime(size_t& hour, size_t& minute);
 
+        // Wakes the screen's controller. Call this before sending anything to the screen
+        // (e.g. a refresh command or an image to display).
+        void Horologium::wakeScreen();
+
+        // Waits for the screen to finish refreshing, then puts its controller in low-power mode.
+        void Horologium::sleepScreen();
+
         // Clears the screen, deactivates it, and shuts the clock down.
         //
         // This function should be called whenever a fatal error occurs

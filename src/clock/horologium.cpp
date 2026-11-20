@@ -86,7 +86,7 @@ std::vector<unsigned char> Horologium::getImage(const size_t& quoteHour, const s
     int rowsIdx = quoteHour * 60 + quoteMin;
     std::vector<std::unordered_map<std::string, std::string>> usableRows = quotes[rowsIdx];
 
-    /* random number generator borrowed from https://stackoverflow.com/a/7560564 */
+    // random number generator borrowed from https://stackoverflow.com/a/7560564
     std::random_device rd; // obtain a random number from hardware
     std::mt19937 gen(rd()); // seed the generator
     std::uniform_int_distribution<> distr(0, usableRows.size() - 1); // define the range
@@ -125,6 +125,7 @@ void Horologium::displayQuote()
     UBYTE* currentImagePtr = buffer.popImage();
     Paint_SelectImage(currentImagePtr);
     EPD_IT8951_4bp_Refresh(currentImagePtr, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr, false);
+    spdlog::info("Displayed a new quote.");
 }
 
 
@@ -140,6 +141,7 @@ void Horologium::refreshBuffer()
 {
     advanceTime(bufferedHour,bufferedMinute);
     bufferImage(bufferedHour, bufferedMinute);
+    spdlog::info("Refreshed the buffer (a new image was added).");
 }
 
 
@@ -165,17 +167,31 @@ void Horologium::advanceTime(size_t& hour, size_t& minute)
 
 void Horologium::tick_forward()
 {
+    wakeScreen();
+
     size_t currHour = 0, currMin = 0;
     getTime(currHour, currMin);
     if (currMin == 59) {
-        std::println("hour has passed. full refresh.");
+        spdlog::info("An hour has passed. Performing a full refresh on the display.");
         EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, GC16_Mode);
     }
     
     displayQuote();
-    spdlog::info("displayed a new quote");
     refreshBuffer();
-    spdlog::info("refreshed the buffer");
+    sleepScreen();
+}
+
+
+void Horologium::wakeScreen()
+{
+    EPD_IT8951_SystemRun();
+}
+
+
+void Horologium::sleepScreen()
+{
+    EPD_IT8951_WaitForDisplayReady();
+    EPD_IT8951_Sleep();
 }
 
 
@@ -185,8 +201,14 @@ void Horologium::clearAndExit(std::string shutdownMsg, bool isCritical) {
     else
         spdlog::info(shutdownMsg);
 
+    wakeScreen();
     EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
+
+    // wait for display wipe to finish before resetting the controller
+    EPD_IT8951_WaitForDisplayReady();
+
     spdlog::info("Cleared the screen.");
+    EPD_IT8951_Sleep();
     DEV_Module_Exit();
     exit(0);
 }
