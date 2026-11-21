@@ -5,7 +5,6 @@
 #include <ctime>
 #include <string>
 #include <print>
-#include <random>
 #include <unordered_map>
 #include <vector>
 
@@ -85,14 +84,10 @@ std::vector<unsigned char> Horologium::GetImage(const size_t& quoteHour, const s
 
     int rowsIdx = quoteHour * 60 + quoteMin;
     std::vector<std::unordered_map<std::string, std::string>> usableRows = quotes[rowsIdx];
+    std::uniform_int_distribution<size_t> distr(0, usableRows.size() - 1);
+    std::unordered_map<std::string, std::string> selectedRow = usableRows[distr(rng)];
 
-    // random number generator borrowed from https://stackoverflow.com/a/7560564
-    std::random_device rd; // obtain a random number from hardware
-    std::mt19937 gen(rd()); // seed the generator
-    std::uniform_int_distribution<> distr(0, usableRows.size() - 1); // define the range
-    
-    std::unordered_map<std::string, std::string> selectedRow = usableRows[distr(gen)];
-    spdlog::info("Generating image for {}:{}, includeCredits={}, start of quote: \"{}...\"", hour, minute, includeCredits, selectedRow["quote"].substr(0,50));
+    spdlog::info("Generating image for {}:{}, start of quote: \"{}...\"", hour, minute, selectedRow["quote"].substr(0,50));
     return writer.GenerateQuoteImage(selectedRow, includeCredits);
 }
 
@@ -203,17 +198,15 @@ void Horologium::SleepScreen()
 }
 
 
-void Horologium::ClearAndExit(std::string shutdownMsg, bool isCritical) {
+void Horologium::ClearAndExit(const std::string& shutdownMsg, bool isCritical) {
     isCritical ? spdlog::critical(shutdownMsg) : spdlog::info(shutdownMsg);
     
     WakeScreen();
     EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
-
-    // wait for display wipe to finish before resetting the controller
     EPD_IT8951_WaitForDisplayReady();
 
     spdlog::info("Cleared the screen.");
     EPD_IT8951_Sleep();
     DEV_Module_Exit();
-    exit(0);
+    exit(isCritical ? 1 : 0);
 }

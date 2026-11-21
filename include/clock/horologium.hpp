@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <random>
 #include <string>
 
 extern "C" {
@@ -70,6 +71,8 @@ class Horologium
 
         std::vector<std::vector<std::unordered_map<std::string, std::string>>> quotes; // A cache for the quotes from a CSV file.
 
+        std::mt19937 rng{std::random_device{}()}; // Used to select a random row for times with >1 possible quotes.
+
         IT8951_Dev_Info Dev_Info = {0, 0}; // Contains info about the screen for Waveshare's drivers.
         UWORD Panel_Width;  // width of the screen, in pixels
         UWORD Panel_Height; // height of the screen, in pixels
@@ -93,6 +96,9 @@ class Horologium
         
 
         // Parses the CSV of quotes and store them in a vector.
+        //
+        // This function assumes that all quotes are in order and
+        // that none are missing.
         //
         // Returns the number of cached quotes, or -1 on failure.
         int CacheQuotes();
@@ -161,10 +167,7 @@ class Horologium
 
         // Clears the screen, deactivates it, and shuts the clock down.
         //
-        // This function should be called whenever a fatal error occurs
-        // with the clock.
-        //
         // shutdownMsg: The reason for the shutdown to log.
         // isCritical: true to print errMsg via spdlog::critical(), or false to print via spdlog::info().
-        void ClearAndExit(std::string shutdownMsg, bool isCritical);
+        void ClearAndExit(const std::string& shutdownMsg, bool isCritical);
 };
