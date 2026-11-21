@@ -2,6 +2,7 @@
 #include "spdlog/spdlog.h"
 
 #include <chrono>
+#include <exception>
 #include <signal.h>
 #include <thread>
 
@@ -14,7 +15,7 @@ static Horologium* activeHorologium = nullptr;
 // before shutting the clock down.
 void Handler(int signo)
 {
-    std::string msg = "Ctrl + C detected. Turning the clock off...";
+    std::string msg = "SIGINT detected. Turning the clock off...";
     activeHorologium->ClearAndExit(msg, false);
 }
 
@@ -51,12 +52,14 @@ void displayFirstImage(Horologium& horologium)
 }
 
 
-// Determines how long the clock's loop in main() should sleep before the next call to TickClockForward().
+// Determines how long the clock's loop in main() should sleep before the next
+// call to TickClockForward().
 //
-// It takes ~3 seconds for TickClockForward() to complete (most of this is for the screen to update with a
-// new image to display). So TickClockForward() is called at the 57th second of every minute. It's possible
-// the function takes less than 3 seconds to return so we need to make sure that the loop sleeps until
-// the next 57th second.
+// It takes ~3 seconds for TickClockForward() to complete (most of this is for
+// the screen to update with a new image to display). So TickClockForward() is
+// called at the 57th second of every minute. It's possible the function takes
+// less than 3 seconds to return so we need to make sure that the loop sleeps
+// until the next 57th second.
 int sleepDuration(int currSecond)
 {
     if (currSecond < 57)
@@ -66,7 +69,7 @@ int sleepDuration(int currSecond)
 }
 
 
-// Creates the clock's Horologium object, and runs the 
+// Creates the clock's Horologium object and runs the 
 // clock's loop indefinitely to display quotes.
 int main()
 {
@@ -112,8 +115,7 @@ int main()
 
             std::this_thread::sleep_for(std::chrono::seconds(sleepDuration(currSecond)));
         }
-    } catch (...) {
-        std::string msg = "An error occurred for unknown reasons.";
-        horologium.ClearAndExit(msg, true);
+    } catch (const std::exception& e) {
+        horologium.ClearAndExit(e.what(), true);
     }
 }
