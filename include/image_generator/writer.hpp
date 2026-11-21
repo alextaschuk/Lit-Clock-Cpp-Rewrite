@@ -4,7 +4,6 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "spdlog/spdlog.h"
@@ -12,6 +11,16 @@
 
 #include "delimiter.hpp"
 #include "utils.hpp"
+
+// Stores a single row from the quotes CSV
+struct Row {
+    std::string time = "";
+    std::string timestring = "";
+    std::string quote = "";
+    std::string title = "";
+    std::string author = "";
+    size_t lineNum = 0; // line in the CSV that the row was read from
+};
 
 
 // Stores the (x,y) coordinate pairs of the top left and bottom right corners of a bounding box.
@@ -24,18 +33,23 @@ struct BoundingBox {
 
 // Stores all of the fonts that may be used and their raw byte buffers.
 struct Fonts {
+    // The font used to draw non-timestring text in a quote.
     std::vector<unsigned char> regularBuf;
     stbtt_fontinfo regular;
 
+    // The standard font with a bold weight.
     std::vector<unsigned char> boldBuf;
     stbtt_fontinfo bold;
 
+    // The standard font with an italic weight.
     std::vector<unsigned char> italicBuf;
     stbtt_fontinfo italic;
 
+    // The standard font with a italic-bold weight.
     std::vector<unsigned char> italicBoldBuf;
     stbtt_fontinfo italicBold;
 
+    // The font to write a quote's credits with. 
     std::vector<unsigned char> creditBuf;
     stbtt_fontinfo credit;
 };
@@ -44,20 +58,20 @@ struct Fonts {
 // Tells the pen if it is writing a quote or a quote's credits.
 enum TextType {
     QUOTE,
-    CREDITS // author and book title
+    CREDITS // Author and book title
 };
 
 // Stores information used to write a glyph on an image. It tracks the image's bounds, where on the image the glyph should be written, the
 // font used to write the glyph, the font's scale, and the color of the glyph.
 struct Pen {
     stbtt_fontinfo font;
-    float fontScale; // value used to convert from font units to pixel units
-    short int color = 128; // grayscale value (0-255) to draw text with.
+    float fontScale; // Value used to convert from font units to pixel units
+    short int color = 128; // Grayscale value (0-255) to draw text with.
     int x = 0; // X coordinate of the pen's position on the image.
     int y = 0; // Y coordinate of the pen's position on the image.
     
     // TODO: make static and move to FormatChar
-    bool pendingEscape = false; // insert a backslash before a delimiter to treat it as a normal character.
+    bool pendingEscape = false; // Insert a backslash before a delimiter to treat it as a normal character.
 };
 
 
@@ -65,7 +79,6 @@ class Writer {
   public:
     BoundingBox bbox; // An area that the pen must write inside of.
     Fonts fonts; // Stores all fonts that could be used to write a quote or its credits.
-    size_t rowNum = 1; // Row number in the CSV of the quote being written.
 
     // Generate an image of a single quote.
     //
@@ -73,7 +86,7 @@ class Writer {
     // includeCredits: `true` to write quote's author and title in the bottom right of the image, `false` to discard.
     //
     // Returns a bitmap of the image as a byte buffer.
-    std::vector<unsigned char> GenerateQuoteImage(std::unordered_map<std::string, std::string> row, const bool& includeCredits);
+    std::vector<unsigned char> GenerateQuoteImage(const Row& row, const bool& includeCredits);
 
     // Saves all quote images to an `images/` directory.
     //
@@ -118,7 +131,7 @@ class Writer {
     //
     // image: Bitmap of the image to write on.
     // timestr: Optional substring within a quote that contains the time. Only passed in if the text being written is a quote.
-    void WriteInBBox(std::vector<unsigned char>& image, std::unordered_map<std::string, std::string> row);
+    void WriteInBBox(std::vector<unsigned char>& image, const Row& row);
 
 
     // A helper to `WriteInBBox()` that wraps `Writer::text` with the timestring delimiter, or replaces it with an error message if the
@@ -128,11 +141,11 @@ class Writer {
     // timestrBegin: output parameter. Index where the first time string delim is found in the text.
     // timestrEnd: output parameter. Index where the second (last) time string delim is found in the text.
     // text: output parameter. Wraps the quote's substring containing the timestring with the timestring delim, and an error message otherwise.
-    void WrapTimestring(std::unordered_map<std::string, std::string> row, std::string& text) {
+    void WrapTimestring(const Row& row, std::string& text) {
         size_t timestrBegin = 0, timestrEnd = 0;
-        const std::string errMsg = std::format("Row {}'s timestring not found in quote starting with \"{}...\"", rowNum, row["quote"].substr(0,50));
+        const std::string errMsg = std::format("Row {}'s timestring not found in quote starting with \"{}...\"", row.lineNum, row.quote.substr(0,50));
 
-        timestrBegin = toLower(row["quote"]).find(toLower(row["timestring"]));
+        timestrBegin = toLower(row.quote).find(toLower(row.timestring));
         if (timestrBegin == std::string::npos)
         {
             spdlog::warn("{}", errMsg);
@@ -140,11 +153,11 @@ class Writer {
         }
         else
         {
-            timestrEnd = timestrBegin + row["timestring"].size();
+            timestrEnd = timestrBegin + row.timestring.size();
             std::string delim = CharacterDelimiters().TIMESTR;
-            text = row["quote"].substr(0, timestrBegin);
-            text += delim + row["quote"].substr(timestrBegin, timestrEnd - timestrBegin) + delim;
-            text += row["quote"].substr(timestrEnd);
+            text = row.quote.substr(0, timestrBegin);
+            text += delim + row.quote.substr(timestrBegin, timestrEnd - timestrBegin) + delim;
+            text += row.quote.substr(timestrEnd);
         }
     }
 

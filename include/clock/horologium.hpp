@@ -69,7 +69,7 @@ class Horologium
         size_t bufferedHour = 0;    // Hour of the quote for the buffer's `tail`.
         size_t bufferedMinute = 0;  // Minute of the quote for the buffer's `tail`.
 
-        std::vector<std::vector<std::unordered_map<std::string, std::string>>> quotes; // A cache for the quotes from a CSV file.
+        std::vector<std::vector<Row>> quotes; // A cache for the quotes from a CSV file.
 
         std::mt19937 rng{std::random_device{}()}; // Used to select a random row for times with >1 possible quotes.
 
@@ -119,7 +119,7 @@ class Horologium
         
         // Renders and buffers the image for the minute after quote that the buffer's
         // `tail` is pointing to.
-        void refreshBuffer();
+        void RefreshBuffer();
 
         
         // Converts an image's 8bpp (bits per pixel) buffer to 4bpp and returns the

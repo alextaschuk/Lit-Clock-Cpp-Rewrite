@@ -23,13 +23,12 @@ void Handler(int signo)
 // Displays a message while the clock waits for the Pi to update its internal clock.
 void displayStartupMsg(Horologium& horologium)
 {
-    std::unordered_map<std::string, std::string> startupMessage = 
-    {
-        {"time", "00:00"},
-        {"timestring", "Literary Quote Clock is Starting…"},
-        {"quote", "Literary Quote Clock is Starting…"},
-        {"title", ""},
-        {"author", ""},
+    Row startupMessage = {
+        "00:00",
+        "Literary Quote Clock is Starting…",
+        "Literary Quote Clock is Starting…",
+        "", 
+        ""
     };
     std::vector<unsigned char> startupImage8bpp = horologium.writer.GenerateQuoteImage(startupMessage, false);
     std::vector<unsigned char> startupImage4bpp = horologium.ConvertTo4Bpp(startupImage8bpp);
@@ -90,7 +89,7 @@ int main()
     
     // initialize the buffer
     for (int i = 0; i < MAX_IMAGES_TO_BUFFER; i++)
-        horologium.refreshBuffer();
+        horologium.RefreshBuffer();
     spdlog::info("Image buffer initialized");
 
     // sleep until we're ready to start using the buffer

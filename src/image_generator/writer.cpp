@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <cctype>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -320,7 +319,7 @@ void Writer::DrawWord(std::vector<unsigned char>& image, std::string word, bool 
 }
 
 
-void Writer::WriteInBBox(std::vector<unsigned char>& image, std::unordered_map<std::string, std::string> row)
+void Writer::WriteInBBox(std::vector<unsigned char>& image, const Row& row)
 {
     // Wrap the timestring with "|" so that it can be found again when writing the quote.
     // If the timestring isn't found, write an error message instead.
@@ -365,7 +364,7 @@ void Writer::WriteInBBox(std::vector<unsigned char>& image, std::unordered_map<s
 }
 
 
-std::vector<unsigned char> Writer::GenerateQuoteImage(std::unordered_map<std::string, std::string> row, const bool& includeCredits)
+std::vector<unsigned char> Writer::GenerateQuoteImage(const Row& row, const bool& includeCredits)
 {
     std::vector<unsigned char> image(SCREEN_WIDTH * SCREEN_HEIGHT, BG_COLOR);
     pen.font = fonts.regular;
@@ -382,7 +381,7 @@ std::vector<unsigned char> Writer::GenerateQuoteImage(std::unordered_map<std::st
     { // draw the title of the quote's book and its author
         textType            = CREDITS;
         pen.color           = CREDIT_COLOR;
-        text                = "_" + row["title"] + "_, " + "\n" + row["author"]; // e.g. "_Dune_, \nFrank Herbert"
+        text                = "_" + row.title + "_, " + "\n" + row.author; // e.g. "_Dune_, \nFrank Herbert"
         bbox.topLeftX       = static_cast<int>(std::floor(SCREEN_WIDTH * 0.45)); // scale credit's bbox down to bottom right of screen
         bbox.topLeftY       = static_cast<int>(std::floor(SCREEN_HEIGHT * 0.85));
         bbox.bottomRightX   = static_cast<int>(std::floor(SCREEN_WIDTH * SCALE_MULTIPLIER));
@@ -394,7 +393,7 @@ std::vector<unsigned char> Writer::GenerateQuoteImage(std::unordered_map<std::st
 
     textType    = QUOTE;
     pen.color   = QUOTE_COLOR;
-    text        = row["quote"];
+    text        = row.quote;
     bbox        = quoteBBox;
 
     WriteInBBox(image, row);

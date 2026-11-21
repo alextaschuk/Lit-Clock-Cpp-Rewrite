@@ -4,8 +4,6 @@
 #include <cstdlib>
 #include <ctime>
 #include <string>
-#include <print>
-#include <unordered_map>
 #include <vector>
 
 #include "spdlog/spdlog.h"
@@ -25,34 +23,29 @@ int Horologium::CacheQuotes()
     std::getline(quoteFile, line); // skip the header row
 
     std::string prevTime = "00:00";
-    std::vector<std::unordered_map<std::string, std::string>> minRows = {}; // all rows for a given minute
-    std::unordered_map<std::string, std::string> currRow = 
-    {
-        {"time", ""},
-        {"timestring", ""},
-        {"quote", ""},
-        {"title", ""},
-        {"author", ""},
-    };
+    std::vector<Row> minRows = {}; // all rows for a given minute
+    Row currRow;
+    size_t lineNum = 1;
+    size_t numCached = 0;
 
-    size_t quoteCount = 0;
     while (std::getline(quoteFile, line))
     {
-        quoteCount++;
+        lineNum++;
         std::vector<std::string> splitRow = split(line, '|');
         if (splitRow.size() != 5){
-            std::println("Error: Row {} is missing a column", quoteCount);
+            spdlog::warn("Row {} was skipped because it is missing a column", lineNum);
             continue;
         }
 
-        currRow["time"]       = splitRow[0];
-        currRow["timestring"] = splitRow[1];
-        currRow["quote"]      = splitRow[2];
-        currRow["title"]      = splitRow[3];
-        currRow["author"]     = splitRow[4];
+        currRow.lineNum     = lineNum;
+        currRow.time        = splitRow[0];
+        currRow.timestring  = splitRow[1];
+        currRow.quote       = splitRow[2];
+        currRow.title       = splitRow[3];
+        currRow.author      = splitRow[4];
 
-        int rowMin = std::stoi(currRow["time"].substr(3));
-        int rowHour = std::stoi(currRow["time"].substr(0, 2));
+        int rowMin = std::stoi(currRow.time.substr(3));
+        int rowHour = std::stoi(currRow.time.substr(0, 2));
         int prevMin = std::stoi(prevTime.substr(3));
         int prevHour = std::stoi(prevTime.substr(0, 2));
 
@@ -60,19 +53,20 @@ int Horologium::CacheQuotes()
         { /* Roll over to the next minute */
             quotes.push_back(minRows);
             minRows.clear();
-            prevTime = prevTime.substr(0, 2) + ":" + currRow["time"].substr(3);
+            prevTime = prevTime.substr(0, 2) + ":" + currRow.time.substr(3);
         }
         else if (rowHour - 1 == prevHour)
         { /* Roll over to the next hour */
             quotes.push_back(minRows);
             minRows.clear();
-            prevTime = currRow["time"].substr(0, 2) + ":00";
+            prevTime = currRow.time.substr(0, 2) + ":00";
         }
         minRows.push_back(currRow);
+        numCached++;
     }
     
     quotes.push_back(minRows);
-    return quoteCount;
+    return static_cast<int>(numCached);
 }
 
 
@@ -83,11 +77,11 @@ std::vector<unsigned char> Horologium::GetImage(const size_t& quoteHour, const s
     bool includeCredits = INCLUDE_CREDITS;
 
     int rowsIdx = quoteHour * 60 + quoteMin;
-    std::vector<std::unordered_map<std::string, std::string>> usableRows = quotes[rowsIdx];
+    const std::vector<Row>& usableRows = quotes[rowsIdx];
     std::uniform_int_distribution<size_t> distr(0, usableRows.size() - 1);
-    std::unordered_map<std::string, std::string> selectedRow = usableRows[distr(rng)];
+    const Row& selectedRow = usableRows[distr(rng)];
 
-    spdlog::info("Generating image for {}:{}, start of quote: \"{}...\"", hour, minute, selectedRow["quote"].substr(0,50));
+    spdlog::info("Generating image for {}:{}, start of quote: \"{}...\"", hour, minute, selectedRow.quote.substr(0,50));
     return writer.GenerateQuoteImage(selectedRow, includeCredits);
 }
 
@@ -104,8 +98,7 @@ std::vector<unsigned char> Horologium::ConvertTo4Bpp(const std::vector<unsigned 
             const unsigned char pixel4bpp = image[row * Panel_Width + col] >> 4;
             const int outByteIdx = row * bytesPerRow + col / 2;
 
-            // According to Waveshare's docs, the even pixel goes in the low nibble,
-            // and the odd pixel goes in the even nibble.
+            // The even pixel goes in the low nibble, and the odd pixel goes in the even nibble.
             // See https://www.waveshare.com/wiki/6inch_HD_e-Paper_HAT#About_bpp
             packed[outByteIdx] |= ((col & 1) == 0) ? pixel4bpp : pixel4bpp << 4;
         }
@@ -138,7 +131,7 @@ void Horologium::BufferImage(size_t hour, size_t minute)
 }
 
 
-void Horologium::refreshBuffer()
+void Horologium::RefreshBuffer()
 {
     AdvanceTime(bufferedHour,bufferedMinute);
     BufferImage(bufferedHour, bufferedMinute);
@@ -180,7 +173,7 @@ void Horologium::TickClockForward()
     }
     
     DisplayQuoteFromBuffer();
-    refreshBuffer();
+    RefreshBuffer();
     SleepScreen();
 }
 

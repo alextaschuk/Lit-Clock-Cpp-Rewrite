@@ -35,14 +35,8 @@ void Writer::SaveImages()
     std::string previousTime = "00:00";
     std::string strRow;
     std::getline(quoteFile, strRow); // skip the header row
-    std::unordered_map<std::string, std::string> row = 
-    {
-        {"time", ""},
-        {"timestring", ""},
-        {"quote", ""},
-        {"title", ""},
-        {"author", ""},
-    };
+    size_t lineNum = 1;
+    Row row;
 
 
     try { // make an images directory if one doesn't exist yet
@@ -54,23 +48,24 @@ void Writer::SaveImages()
 
     while (std::getline(quoteFile, strRow))
     { // TODO: function that returns a single row using rowNum for line #
-        rowNum++;
+        lineNum++;
         std::vector<std::string> splitRow = split(strRow, '|');
         if (splitRow.size() != 5) {
-            spdlog::warn("Row {} was skipped because it is missing a column.", rowNum);
+            spdlog::warn("Row {} was skipped because it is missing a column.", lineNum);
             continue;
         }
 
-        row["time"]       = splitRow[0];
-        row["timestring"] = splitRow[1];
-        row["quote"]      = splitRow[2];
-        row["title"]      = splitRow[3];
-        row["author"]     = splitRow[4];
+        row.lineNum     = lineNum;
+        row.time        = splitRow[0];
+        row.timestring  = splitRow[1];
+        row.quote       = splitRow[2];
+        row.title       = splitRow[3];
+        row.author      = splitRow[4];
 
-        if (row["time"] == previousTime) {
+        if (row.time == previousTime) {
             imgNum++;
         } else {
-            std::string currTime = row["time"];
+            std::string currTime = row.time;
             try {
                 // track number of minutes since 00:00. The current row's time may be at most 1 minute greater than the previous row.
                 int prevTotal = std::stoi(previousTime.substr(0, 2)) * 60 + std::stoi(previousTime.substr(3));
@@ -79,7 +74,7 @@ void Writer::SaveImages()
 
                 if (currTotal != expectedTotal) {
                     std::string expectedTime = std::format("{:02}:{:02}", expectedTotal / 60, expectedTotal % 60);
-                    spdlog::warn("Row {}'s time is out-of-order (expected a quote for {}, got {}).", rowNum, expectedTime, currTime);
+                    spdlog::warn("Row {}'s time is out-of-order (expected a quote for {}, got {}).", lineNum, expectedTime, currTime);
                 }
 
                 imgNum = 0;
@@ -95,7 +90,7 @@ void Writer::SaveImages()
             }
         }
 
-        std::string time = row["time"];
+        std::string time = row.time;
         time = time.replace(2, 1, "");
         std::string filename = std::format("{}_{}.{}", time, std::to_string(imgNum), IMAGE_FORMAT); // e.g. 1357_2.png for 13:57's 3rd quote
         std::string filepath = projectPath(IMAGE_PATH + filename);
@@ -111,7 +106,7 @@ void Writer::SaveImages()
             return;
         }
 
-        std::string progressBar = "Creating images... " + std::to_string(rowNum);
+        std::string progressBar = "Creating images... " + std::to_string(lineNum);
         std::cout << progressBar << '\r' << std::flush;
     }
     quoteFile.close();
