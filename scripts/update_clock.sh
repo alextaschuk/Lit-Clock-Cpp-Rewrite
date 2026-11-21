@@ -23,19 +23,18 @@ ROOT="$REPO_DIR"
 source "$SCRIPT_DIR/lib/common.sh"
 source "$SCRIPT_DIR/lib/quotes.sh"
 
-echo "┌───────────────────────────────────────┐"
-echo "$(date): Begin C++ Clock's update script."
-echo "└───────────────────────────────────────┘"
+
+echo -e "\n\n$(date): Begin clock's update script."
 
 
 ##################################################
-# Attempt to restart the Pi. Print error message
-# if unsuccessful.
+# Attempt to restart the Pi after downloading an
+# update.
 ##################################################
 restart_pi() {
-    log 1 "Update complete. Restarting the Pi..."
+    log 1 "Update complete. Restarting the Pi."
     if ! sudo -n shutdown -r now; then
-        warn 1 "Update completed, but restart failed (passwordless sudo should be set up for shutdown)" >&2
+        warn 1 "Update completed, but restart failed (passwordless sudo should be set up for shutdown)." >&2
         return 1
     fi
 }
@@ -118,7 +117,7 @@ main() {
     if [[ "$REPO_UPDATED" == true || "$CSV_UPDATED" == true ]]; then
         restart_pi
     else
-        log 1 "No updates to the remote repo or the CSV, so a restart isn't required."
+        log 1 "No updates found, so a restart isn't required."
     fi
 }
 
