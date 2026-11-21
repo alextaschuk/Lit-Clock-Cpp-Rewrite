@@ -138,7 +138,6 @@ void Horologium::DisplayQuoteFromBuffer()
 
 void Horologium::BufferImage(size_t hour, size_t minute)
 {
-    std::vector<unsigned char> image8bpp = GetImage(hour, minute);
     std::vector<unsigned char> packed4bpp = ConvertTo4Bpp(GetImage(hour, minute));
     buffer.PushImage(packed4bpp);
 }
@@ -176,6 +175,8 @@ void Horologium::TickClockForward()
 {
     WakeScreen();
 
+    //Perform a full refresh at the top of every hour.
+    // This helps prevent ghosting.
     size_t currHour = 0, currMin = 0;
     GetTime(currHour, currMin);
     if (currMin == 59) {
