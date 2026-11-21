@@ -65,6 +65,7 @@ class Writer {
   public:
     BoundingBox bbox; // An area that the pen must write inside of.
     Fonts fonts; // Stores all fonts that could be used to write a quote or its credits.
+    size_t rowNum = 1; // Row number in the CSV of the quote being written.
 
     // Generate an image of a single quote.
     //
@@ -75,6 +76,8 @@ class Writer {
     std::vector<unsigned char> GenerateQuoteImage(std::unordered_map<std::string, std::string> row, const bool& includeCredits);
 
     // Saves all quote images to an `images/` directory.
+    //
+    // Note: This function is defined in save_images.cpp, not writer.cpp.
     //
     // Each row in the CSV is parsed to create an image of each quote.
     void SaveImages();
@@ -127,7 +130,7 @@ class Writer {
     // text: output parameter. Wraps the quote's substring containing the timestring with the timestring delim, and an error message otherwise.
     void WrapTimestring(std::unordered_map<std::string, std::string> row, std::string& text) {
         size_t timestrBegin = 0, timestrEnd = 0;
-        const std::string errMsg = std::format("Time string not found in quote starting with \"{}...\"", row["quote"].substr(0,50));
+        const std::string errMsg = std::format("Row {}'s timestring not found in quote starting with \"{}...\"", rowNum, row["quote"].substr(0,50));
 
         timestrBegin = toLower(row["quote"]).find(toLower(row["timestring"]));
         if (timestrBegin == std::string::npos)

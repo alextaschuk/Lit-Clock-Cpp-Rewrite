@@ -2,7 +2,9 @@
 
 #include <chrono>
 #include <filesystem>
+#include <format>
 #include <iostream>
+#include <string>
 
 #include "spdlog/spdlog.h"
 #include "stb/stb_image_write.h"
@@ -19,10 +21,20 @@ void Writer::SaveImages()
         InitFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), fonts.italicBoldBuf, fonts.italicBold);
         InitFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.creditBuf, fonts.credit);
     } catch (const std::runtime_error) {
-        spdlog::critical("Failed to initialize fonts. Stopping image generation.");
+        spdlog::critical("Failed to initialize one or more fonts.");
         return;
     }
 
+    std::ifstream quoteFile(projectPath(QUOTES_PATH));
+    if (!quoteFile.is_open()) {
+        spdlog::critical("Failed to open CSV file at {}.", QUOTES_PATH);
+        return;
+    }
+    
+    int imgNum = -1; // appended to the end of an image file
+    std::string previousTime = "00:00";
+    std::string strRow;
+    std::getline(quoteFile, strRow); // skip the header row
     std::unordered_map<std::string, std::string> row = 
     {
         {"time", ""},
@@ -32,32 +44,20 @@ void Writer::SaveImages()
         {"author", ""},
     };
 
-    std::ifstream quoteFile(projectPath(QUOTES_PATH));
-    if (!quoteFile.is_open()) {
-        spdlog::critical("Failed to open CSV file at {}. Stopping image generation.", QUOTES_PATH);
-        return;
-    }
-
-    std::string line;
-    std::getline(quoteFile, line); // skip the header row
-    
-    std::string previousTime = "00:00";
-    int imgNum = -1;
-    size_t quoteCount = 0;
 
     try { // make an images directory if one doesn't exist yet
         std::filesystem::create_directories(projectPath("images"));
     } catch (const std::filesystem::filesystem_error& e) {
-        spdlog::critical("Failed to make images/ directory. Stopping image generation.");
+        spdlog::critical("Failed to make an images/ directory.");
         return;
     }
 
-    while (std::getline(quoteFile, line))
-    { // TODO: function that returns a single row using quoteCount for line #
-        quoteCount++;
-        std::vector<std::string> splitRow = split(line, '|');
+    while (std::getline(quoteFile, strRow))
+    { // TODO: function that returns a single row using rowNum for line #
+        rowNum++;
+        std::vector<std::string> splitRow = split(strRow, '|');
         if (splitRow.size() != 5) {
-            spdlog::warn("Row {} was skipped because it is missing a column.", quoteCount + 1);
+            spdlog::warn("Row {} was skipped because it is missing a column.", rowNum);
             continue;
         }
 
@@ -71,35 +71,47 @@ void Writer::SaveImages()
             imgNum++;
         } else {
             std::string currTime = row["time"];
-            int prevMin = std::stoi(previousTime.substr(3));
-            int currMin = std::stoi(currTime.substr(3));
+            try {
+                // track number of minutes since 00:00. The current row's time may be at most 1 minute greater than the previous row.
+                int prevTotal = std::stoi(previousTime.substr(0, 2)) * 60 + std::stoi(previousTime.substr(3));
+                int currTotal = std::stoi(currTime.substr(0, 2)) * 60 + std::stoi(currTime.substr(3));
+                int expectedTotal = (prevTotal + 1) % 1440;
 
-            if ((currMin - 1 != prevMin) && (previousTime.substr(3) != "59"))
-            {
-                int missingMin = prevMin + 1;
-                std::string missingTime = std::format("{}{:02}", previousTime.substr(0, 2), missingMin);
-                spdlog::warn("Missing or out-of-order quote (expected {}, got {}", missingTime, currTime);
+                if (currTotal != expectedTotal) {
+                    std::string expectedTime = std::format("{:02}:{:02}", expectedTotal / 60, expectedTotal % 60);
+                    spdlog::warn("Row {}'s time is out-of-order (expected a quote for {}, got {}).", rowNum, expectedTime, currTime);
+                }
+
+                imgNum = 0;
+                previousTime = currTime;
             }
-
-            imgNum = 0;
-            previousTime = currTime;
+            catch (const std::invalid_argument&) {
+                spdlog::warn("previous time \"{}\" or current time \"{}\" doesn't have a valid minute", previousTime, currTime);
+                continue;
+            }
+            catch (const std::out_of_range&) {
+                spdlog::warn("previous time \"{}\" or current time \"{}\" has a minute too large for an int", previousTime, currTime);
+                continue;
+            }
         }
 
-        std::string time = row["time"].replace(2, 1, "");
-        std::string filepath = projectPath(IMAGE_PATH + "quote_" + time + "_" + std::to_string(imgNum) + "." + IMAGE_FORMAT);
+        std::string time = row["time"];
+        time = time.replace(2, 1, "");
+        std::string filename = std::format("{}_{}.{}", time, std::to_string(imgNum), IMAGE_FORMAT); // e.g. 1357_2.png for 13:57's 3rd quote
+        std::string filepath = projectPath(IMAGE_PATH + filename);
 
         std::vector<unsigned char> imgOut = GenerateQuoteImage(row, INCLUDE_CREDITS);
         
-        if (IMAGE_FORMAT == "bmp") {
+        if (IMAGE_FORMAT == "bmp")
             stbi_write_bmp(filepath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, imgOut.data());
-        } else if (IMAGE_FORMAT == "png") {
+        else if (IMAGE_FORMAT == "png")
             stbi_write_png(filepath.c_str(), SCREEN_WIDTH, SCREEN_HEIGHT, 1, imgOut.data(), SCREEN_WIDTH);
-        } else {
-            spdlog::error("{} is an invalid image type (must be \"png\" or \"bmp\"). Stopping image generation.", IMAGE_FORMAT);
+        else {
+            spdlog::error("{} is an invalid image type (must be \"png\" or \"bmp\").", IMAGE_FORMAT);
             return;
         }
 
-        std::string progressBar = "Creating images... " + std::to_string(quoteCount);
+        std::string progressBar = "Creating images... " + std::to_string(rowNum);
         std::cout << progressBar << '\r' << std::flush;
     }
     quoteFile.close();
