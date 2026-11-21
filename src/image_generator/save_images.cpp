@@ -20,7 +20,7 @@ void Writer::SaveImages()
         InitFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.boldBuf, fonts.bold);
         InitFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), fonts.italicBoldBuf, fonts.italicBold);
         InitFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), fonts.creditBuf, fonts.credit);
-    } catch (const std::runtime_error) {
+    } catch (const std::runtime_error&) {
         spdlog::critical("Failed to initialize one or more fonts.");
         return;
     }

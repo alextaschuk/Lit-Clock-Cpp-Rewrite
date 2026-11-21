@@ -57,7 +57,7 @@ class Horologium
                 writer.InitFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), writer.fonts.boldBuf, writer.fonts.bold);
                 writer.InitFont(projectPath("/share/fonts/Bookerly-Bold-Italic.ttf"), writer.fonts.italicBoldBuf, writer.fonts.italicBold);
                 writer.InitFont(projectPath("/share/fonts/Bookerly-Bold.ttf"), writer.fonts.creditBuf, writer.fonts.credit);
-            } catch (const std::runtime_error) {
+            } catch (const std::runtime_error&) {
                 std::string errMsg = "Failed to initialize fonts. Exiting clock startup.";
                 ClearAndExit(errMsg, true);
             }
