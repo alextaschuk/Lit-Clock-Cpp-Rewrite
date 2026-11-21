@@ -2,9 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
-#include <print>
 #include <string>
-#include <vector>
 
 extern "C" {
     #include "waveshare-IT8951/lib/e-Paper/EPD_IT8951.h"
@@ -22,7 +20,8 @@ extern "C" {
 // This class contains all logic to ensure that the correct quote is
 // displayed at each minute and information about the EPD that is necessary for
 // Waveshare's libraries to display images. It is used in clock.cpp's main()
-// function to continuously update the screen once every minute with a new quote.
+// function to continuously update the screen once every minute with a new
+// quote.
 class Horologium
 {
     public:
@@ -46,7 +45,7 @@ class Horologium
             int numCachedQuotes = CacheQuotes();
             if ( numCachedQuotes == -1) {
                 std::string errMsg = "Failed to open CSV file containing clock's quotes. Exiting clock startup.";
-                ClearAndExit(errMsg, true)
+                ClearAndExit(errMsg, true);
             } else {
                 spdlog::info("Cached {0:d} quotes.", numCachedQuotes);
             }
@@ -75,50 +74,69 @@ class Horologium
         UWORD Panel_Width;  // width of the screen, in pixels
         UWORD Panel_Height; // height of the screen, in pixels
         UDOUBLE Init_Target_Memory_Addr; // The memory address on the IT8951 controller's onboard memory where pixel data should be written before a display refresh.
-        
-        // Parses the CSV of quotes and store them in a vector.
-        //
-        // Returns the number of cached quotes, or -1 on failure.
-        int CacheQuotes();
 
-        // Advances the clock by one minute.
-        // 
-        // The image at the front of the buffer is displayed and popped, and and the buffer is refilled.
-        // 
-        // Is intended be called at the 57th second of every minute by in clock.cpp's loop in main(). At
-        // the top of every hour (e.g. 12:00), a full refresh is performed on the screen (all pixels are
-        // set to white) prior to displaying the next image. This helps prevent ghosting.
-        void TickClockForward();
-
-        // Renders the image for the given time (hour:minute), converts it to 4bpp, and pushes it onto the buffer.
-        //
-        // hour: The hour (0-23) of the quote to render.
-        // minute: The minute (0-60) of the quote to render.
-        void BufferImage(size_t hour, size_t minute);
-
-        // Renders and buffers the image for the minute after quote that the buffer's `tail` is pointing to.
-        void refreshBuffer();
-
-        // Converts an image's 8bpp (bits per pixel) buffer to 4bpp and returns the new 4bpp buffer.
-        //
-        // `Writer::GenerateQuoteImage()` returns a buffer for an image where each byte represents one pixel (thus,
-        // the image has a grayscale range of 0-255). Waveshare recommends using 4bpp for refreshing (grayscale
-        // range of 0-15) because " the amount of transmitted data is reduced by half, the transmission speed is
-        // twice as fast, and there is no difference in display effect."
-        //
-        // image: A flat buffer of an 8bpp image to convert to 4bpp
-        std::vector<unsigned char> ConvertTo4Bpp(const std::vector<unsigned char>& image);
 
         // Refresh the screen with a new image.
         //
         // img: A flat buffer of a 4bpp image to display on the screen.
         void RefreshScreen(UBYTE* img);
 
-        // Pops the image from the front of the buffer (the image that the buffer's `head` is pointing to) and
-        // displays it onto the screen.
+        
+        // Wakes the screen's controller. Call this before sending anything to the
+        // screen (e.g. a refresh command to display an image).
+        void WakeScreen();
+
+
+        // Waits for the screen to finish refreshing, then puts its controller in
+        // low-power mode.
+        void SleepScreen();
+        
+
+        // Parses the CSV of quotes and store them in a vector.
+        //
+        // Returns the number of cached quotes, or -1 on failure.
+        int CacheQuotes();
+
+
+        // Advances the clock by one minute. The image at the front of the buffer is
+        // displayed and popped, and and the buffer is refilled.
+        void TickClockForward();
+
+
+        // Renders the image for the given time (hour:minute), converts it to 4bpp,
+        // and pushes it onto the buffer.
+        //
+        // hour: The hour (0-23) of the quote to render.
+        // minute: The minute (0-60) of the quote to render.
+        void BufferImage(size_t hour, size_t minute);
+
+        
+        // Renders and buffers the image for the minute after quote that the buffer's
+        // `tail` is pointing to.
+        void refreshBuffer();
+
+        
+        // Converts an image's 8bpp (bits per pixel) buffer to 4bpp and returns the
+        // new 4bpp buffer.
+        //
+        // `Writer::GenerateQuoteImage()` returns a buffer for an image where each
+        // byte represents one pixel (thus, the image has a grayscale range of 0-255).
+        // Waveshare recommends using 4bpp for refreshing (grayscale range of 0-15)
+        // because "the amount of transmitted data is reduced by half, the
+        // transmission speed is twice as fast, and there is no difference in display
+        // effect."
+        //
+        // image: A flat buffer of an 8bpp image to convert to 4bpp
+        std::vector<unsigned char> ConvertTo4Bpp(const std::vector<unsigned char>& image);
+
+
+        // Pops the image from the front of the buffer (the image that the buffer's
+        // `head` is pointing to) and displays it onto the screen.
         void DisplayQuoteFromBuffer();
 
-        // Returns the rendered image of random row from the quote cache for the given time (hour:minute).
+
+        // Returns the rendered image of random row from the quote cache for the given
+        // time (hour:minute).
         //
         // quoteHour: The hour (0-23) of the quote to render.
         // quoteMin: The minute (0-59) of the quote to render.
@@ -126,24 +144,20 @@ class Horologium
         // Returns a bitmap of the rendered image.
         std::vector<unsigned char> GetImage(const size_t& quoteHour, const size_t& quoteMin);
         
+
         // Gets the current local hour and minute from the system clock.
         //
         // hour: output parameter. Set to the current local hour (0-23).
         // minute: output parameter. Set to the current local minute (0-59).
         void GetTime(size_t& hour, size_t& minute);
         
+
         // Advances the given time (hour:minute) by one minute, wrapping at the top of the hour.
         //
         // hour: output parameter. The hour of the next minute (0-23).
         // minute: output parameter. The next minute (0-59).
         void AdvanceTime(size_t& hour, size_t& minute);
 
-        // Wakes the screen's controller. Call this before sending anything to the screen
-        // (e.g. a refresh command or an image to display).
-        void WakeScreen();
-
-        // Waits for the screen to finish refreshing, then puts its controller in low-power mode.
-        void SleepScreen();
 
         // Clears the screen, deactivates it, and shuts the clock down.
         //
