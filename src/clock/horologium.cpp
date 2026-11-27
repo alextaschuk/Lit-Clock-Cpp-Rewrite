@@ -44,10 +44,10 @@ int Horologium::CacheQuotes()
         currRow.title       = splitRow[3];
         currRow.author      = splitRow[4];
 
-        int rowMin = std::stoi(currRow.time.substr(3));
-        int rowHour = std::stoi(currRow.time.substr(0, 2));
         int prevMin = std::stoi(prevTime.substr(3));
         int prevHour = std::stoi(prevTime.substr(0, 2));
+        int rowMin = std::stoi(currRow.time.substr(3));
+        int rowHour = std::stoi(currRow.time.substr(0, 2));
 
         if(rowMin - 1 == prevMin)
         { /* Roll over to the next minute */
@@ -103,7 +103,6 @@ std::vector<unsigned char> Horologium::ConvertTo4Bpp(const std::vector<unsigned 
             packed[outByteIdx] |= ((col & 1) == 0) ? pixel4bpp : pixel4bpp << 4;
         }
     }
-
     return packed;
 }
 
@@ -111,7 +110,7 @@ std::vector<unsigned char> Horologium::ConvertTo4Bpp(const std::vector<unsigned 
 void Horologium::RefreshScreen(UBYTE* img)
 {
     WakeScreen();
-    EPD_IT8951_4bp_Refresh(img, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr, false);
+    EPD_IT8951_4bp_Refresh(img, 0, 0, Panel_Width, Panel_Height, false, Init_Target_Memory_Addr, true);
     SleepScreen();
 }
 
@@ -164,7 +163,7 @@ void Horologium::TickClockForward()
     WakeScreen();
 
     //Perform a full refresh at the top of every hour.
-    // This helps prevent ghosting.
+    // This helps prevent pixel ghosting.
     size_t currHour = 0, currMin = 0;
     GetTime(currHour, currMin);
     if (currMin == 59) {
