@@ -136,11 +136,23 @@ static void EPD_IT8951_WriteMuitiData(UWORD* Data_Buf, UDOUBLE Length)
 
     EPD_IT8951_ReadBusy();
 
+    UBYTE Block[4096]; // send 1024 words at a time
+    UDOUBLE Block_Len = 0;
+
     for(UDOUBLE i = 0; i<Length; i++)
     {
-	    DEV_SPI_WriteByte(Data_Buf[i]>>8);
-	    DEV_SPI_WriteByte(Data_Buf[i]);
+        Block[Block_Len++] = Data_Buf[i]>>8;
+	    Block[Block_Len++] = Data_Buf[i];
+
+	    if (Block_Len == sizeof(Block)) {
+	        DEV_SPI_Write_nByte(Block, Block_Len);
+	        Block_Len = 0;
+	    }
     }
+
+    if (Block_Len > 0)
+        DEV_SPI_Write_nByte(Block, Block_Len);
+    
     DEV_Digital_Write(EPD_CS_PIN, HIGH);
 }
 

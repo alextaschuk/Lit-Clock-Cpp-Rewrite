@@ -85,6 +85,40 @@ void DEV_SPI_WriteByte(UBYTE Value)
 #endif
 }
 
+
+// Writes several bytes of data over a single SPI transaction.
+//
+// Sends the same bytes as calling DEV_SPI_WriteByte() once per byte, but in
+// far fewer calls. This function primarily improves EPDs using lg, since the
+// library uses syscalls to write to SPI controller registers.
+//
+// Buf: the bytes to send, in order.
+// Len: the number of bytes to send.
+void DEV_SPI_Write_nByte(const UBYTE* Buf, UDOUBLE Len)
+{
+#ifdef BCM
+	bcm2835_spi_writenb((char*)Buf, Len);
+#elif  LGPIO
+    while (Len > 0)
+	{
+        int Count = (Len > DEV_SPI_MAX_TRANSFER) ? DEV_SPI_MAX_TRANSFER : (int)Len;
+        int Sent = lgSpiWrite(SPI_Handle, (char*)Buf, Count);
+
+        if (Sent != Count) {
+            Debug("lgSpiWrite failed: sent %d of %d bytes\r\n", Sent, Count);
+            return;
+        }
+
+        Buf += Count;
+        Len -= Count;
+    }
+#elif GPIOD
+	for (UDOUBLE i = 0; i < Len; i++)
+		DEV_HARDWARE_SPI_TransferByte(Buf[i]);
+#endif
+}
+
+
 /******************************************************************************
 function:	SPI Read
 parameter:
@@ -222,8 +256,8 @@ UBYTE DEV_Module_Init(void)
 	bcm2835_spi_begin();                                         //Start spi interface, set spi pin for the reuse function
 	bcm2835_spi_setBitOrder(BCM2835_SPI_BIT_ORDER_MSBFIRST);     //High first transmission
 	bcm2835_spi_setDataMode(BCM2835_SPI_MODE0);                  //spi mode 0
-	bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_16);   //For RPi3/3B/3B+
-	//bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_32);   //For RPi 4
+	//bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_16);   //For RPi3/3B/3B+
+	bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_32);   //For RPi 4
 	/* SPI clock reference link：*/
 	/*http://www.airspayce.com/mikem/bcm2835/group__constants.html#gaf2e0ca069b8caef24602a02e8a00884e*/
 
