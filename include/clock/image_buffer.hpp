@@ -6,9 +6,10 @@
 
 #include "../constants.hpp"
 
-// Implements a ring buffer (FIFO) that stores up to `MAX_IMAGES_TO_BUFFER` images at once
-// in a contiguous byte buffer. Images are pushed (write) at `tail` and popped (read) from `head`.
-// Buffered images must contain a color depth of 4 bits per pixel (bpp).
+// Implements a ring buffer (FIFO) that stores up to `MAX_IMAGES_TO_BUFFER`
+// images at once in a contiguous byte buffer. Images are pushed (write) at
+// `tail` and popped (read) from `head`. Buffered images must contain a color
+// depth of 4 bits per pixel (bpp).
 class ImageBuffer {
     public:    
         size_t head = 0; // Index of the image to read/pop.
@@ -36,17 +37,25 @@ class ImageBuffer {
             return size == MAX_IMAGES_TO_BUFFER;
         }
 
-        // Copies an image into the buffer at the current `tail` slot and advances `tail`.
+        // Copies an image into the buffer at the current `tail` slot and advances
+        // `tail`.
         //
-        // image: The image's pixel data. Must be exactly `IMAGE_SIZE_4BPP` bytes long.
+        // image: The image's pixel data. Must be exactly `IMAGE_SIZE_4BPP` bytes
+        // long.
         //
-        // Throws `std::runtime_error` if the buffer is already full, or if `image` is not exactly `IMAGE_SIZE_4BPP` bytes long.
+        // Throws `std::runtime_error` if the buffer is already full, or if `image` is
+        // not exactly `IMAGE_SIZE_4BPP` bytes long.
         void PushImage(const std::vector<unsigned char>& image);
 
-        // Pops the oldest buffered image and returns a pointer to it, advancing `head` to the next slot.
+        // Pops the oldest buffered image and returns a pointer to it, advancing
+        // `head` to the next slot.
         //
         // Throws `std::runtime_error` if the buffer is empty.
         //
         // Returns a pointer to the popped image's data, `IMAGE_SIZE_4BPP` bytes long.
         std::uint8_t* PopImage();
+
+
+        // Discards every buffered image.
+        void Clear();
 };

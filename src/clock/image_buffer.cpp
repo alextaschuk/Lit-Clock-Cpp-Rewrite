@@ -32,3 +32,10 @@ uint8_t* ImageBuffer::PopImage()
     --size;
     return imagePointer;
 }
+
+
+void ImageBuffer::Clear() {
+    head = 0;
+    tail = 0;
+    size = 0;
+}

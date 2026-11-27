@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <random>
@@ -66,8 +67,9 @@ class Horologium
         Writer writer;
 
         ImageBuffer buffer; // Ring buffer containing the next `MAX_IMAGES_TO_BUFFER` number of images.
-        size_t bufferedHour = 0;    // Hour of the quote for the buffer's `tail`.
-        size_t bufferedMinute = 0;  // Minute of the quote for the buffer's `tail`.
+        
+        // The minute (hh:mm:00) of the quote most recently pushed onto the buffer.
+        std::chrono::system_clock::time_point bufferedTime;
 
         std::vector<std::vector<Row>> quotes; // A cache for the quotes from a CSV file.
 
@@ -103,10 +105,28 @@ class Horologium
         // Returns the number of cached quotes, or -1 on failure.
         int CacheQuotes();
 
+        
+        // Preempts the next image by popping and uploading the image at the front of
+        // the buffer to the IT8951 controller's memory.
+        //
+        // This function is usually called right after `ShowPreparedQuote()` at the
+        // top of the while loop in `main()` of clock.cpp. An exception is made when
+        // the next image is for the top of the hour (i.e., HH:00) because a full
+        // refresh is performed at the top of every hour: the display sleeps until the
+        // next minute before this function is called, which prevents
+        // `clearScreen=true` from immediately wiping the screen after the image for
+        // HH:59 is displayed.
+        //
+        // clearScreen: true to clear the screen before uploading (done once an hour
+        // to prevent ghosting). Clearing overwrites the controller's memory, so it
+        // must happen before the upload, not after.
+        void PrepareNextQuote(bool clearScreen);
+ 
 
-        // Advances the clock by one minute. The image at the front of the buffer is
-        // displayed and popped, and and the buffer is refilled.
-        void TickClockForward();
+        // Refreshes the display with the uploaded image in `PrepareNextQuote()`.
+        // 
+        // Call this at the exact start of the minute, after `PrepareNextQuote()`.
+        void ShowPreparedQuote();
 
 
         // Renders the image for the given time (hour:minute), converts it to 4bpp,
@@ -121,8 +141,12 @@ class Horologium
         // `tail` is pointing to.
         void RefreshBuffer();
 
+
+        // Empties the buffer and refills it with the quotes for the minutes *after* `thisMinute`.
+        void ResetBuffer(std::chrono::system_clock::time_point thisMinute);
+
         
-        // Converts an image's 8bpp (bits per pixel) buffer to 4bpp and returns the
+        // Converts an 8bpp image buffer to a 4bpp buffer and returns the
         // new 4bpp buffer.
         //
         // `Writer::GenerateQuoteImage()` returns a buffer for an image where each
@@ -136,33 +160,21 @@ class Horologium
         std::vector<unsigned char> ConvertTo4Bpp(const std::vector<unsigned char>& image);
 
 
-        // Pops the image from the front of the buffer (the image that the buffer's
-        // `head` is pointing to) and displays it onto the screen.
-        void DisplayQuoteFromBuffer();
-
-
-        // Returns the rendered image of random row from the quote cache for the given
-        // time (hour:minute).
+        // Returns an the image buffer of an 8bpp (bits per pixel) rendered image of
+        // random row from the quote cache for the given time (hour:minute).
         //
         // quoteHour: The hour (0-23) of the quote to render.
         // quoteMin: The minute (0-59) of the quote to render.
         //
         // Returns a bitmap of the rendered image.
         std::vector<unsigned char> GetImage(const size_t& quoteHour, const size_t& quoteMin);
-        
 
-        // Gets the current local hour and minute from the system clock.
-        //
-        // hour: output parameter. Set to the current local hour (0-23).
-        // minute: output parameter. Set to the current local minute (0-59).
-        void GetTime(size_t& hour, size_t& minute);
-        
 
-        // Advances the given time (hour:minute) by one minute, wrapping at the top of the hour.
+        // Returns the hour (0-23) and minute (0-59), local to the RPi's system clock,
+        // of a moment in time.
         //
-        // hour: output parameter. The hour of the next minute (0-23).
-        // minute: output parameter. The next minute (0-59).
-        void AdvanceTime(size_t& hour, size_t& minute);
+        // moment: The time which the local hour and minute is returned for.
+        static std::pair<size_t, size_t> LocalHourMinute(std::chrono::system_clock::time_point moment);
 
 
         // Clears the screen, deactivates it, and shuts the clock down.
