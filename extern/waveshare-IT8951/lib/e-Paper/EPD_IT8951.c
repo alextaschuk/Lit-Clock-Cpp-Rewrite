@@ -136,11 +136,23 @@ static void EPD_IT8951_WriteMuitiData(UWORD* Data_Buf, UDOUBLE Length)
 
     EPD_IT8951_ReadBusy();
 
+    UBYTE Block[4096]; // send 1024 words at a time
+    UDOUBLE Block_Len = 0;
+
     for(UDOUBLE i = 0; i<Length; i++)
     {
-	    DEV_SPI_WriteByte(Data_Buf[i]>>8);
-	    DEV_SPI_WriteByte(Data_Buf[i]);
+        Block[Block_Len++] = Data_Buf[i]>>8;
+	    Block[Block_Len++] = Data_Buf[i];
+
+	    if (Block_Len == sizeof(Block)) {
+	        DEV_SPI_Write_nByte(Block, Block_Len);
+	        Block_Len = 0;
+	    }
     }
+
+    if (Block_Len > 0)
+        DEV_SPI_Write_nByte(Block, Block_Len);
+    
     DEV_Digital_Write(EPD_CS_PIN, HIGH);
 }
 
@@ -487,7 +499,7 @@ static void EPD_IT8951_HostAreaPackedPixelWrite_4bp(IT8951_Load_Img_Info*Load_Im
     EPD_IT8951_LoadImgAreaStart(Load_Img_Info,Area_Img_Info);
 
     //from byte to word
-    Source_Buffer_Width = (Area_Img_Info->Area_W*4/8)/2;
+    Source_Buffer_Width = (Area_Img_Info->Area_W*4/8)/2; // convert pixel width to number of words per row
     Source_Buffer_Height = Area_Img_Info->Area_H;
     Source_Buffer_Length = Source_Buffer_Width * Source_Buffer_Height;
 
@@ -883,6 +895,47 @@ void EPD_IT8951_4bp_Refresh(UBYTE* Frame_Buf, UWORD X, UWORD Y, UWORD W, UWORD H
     {
         EPD_IT8951_Display_AreaBuf(X,Y,W,H, GC16_Mode,Target_Memory_Addr);
     }
+}
+
+
+/******************************************************************************
+Uploads a 4bpp image to the IT8951 controller's memory at Target_Memory_Addr.
+
+Note: This does not refresh the screen. Call EPD_IT8951_4bp_Show() to refresh
+the display with the loaded image.
+******************************************************************************/
+void EPD_IT8951_4bp_Load(UBYTE* Frame_Buf, UWORD X, UWORD Y, UWORD W, UWORD H, UDOUBLE Target_Memory_Addr, bool Packed_Write)
+{
+    IT8951_Load_Img_Info Load_Img_Info;
+    IT8951_Area_Img_Info Area_Img_Info;
+
+    // Don't overwrite the controller's memory while a screen update is still reading it.
+    EPD_IT8951_WaitForDisplayReady();
+
+    Load_Img_Info.Source_Buffer_Addr = Frame_Buf;
+    Load_Img_Info.Endian_Type = IT8951_LDIMG_L_ENDIAN;
+    Load_Img_Info.Pixel_Format = IT8951_4BPP;
+    Load_Img_Info.Rotate =  IT8951_ROTATE_0;
+    Load_Img_Info.Target_Memory_Addr = Target_Memory_Addr;
+
+    Area_Img_Info.Area_X = X;
+    Area_Img_Info.Area_Y = Y;
+    Area_Img_Info.Area_W = W;
+    Area_Img_Info.Area_H = H;
+
+    EPD_IT8951_HostAreaPackedPixelWrite_4bp(&Load_Img_Info, &Area_Img_Info, Packed_Write);
+}
+
+
+/******************************************************************************
+Updates the screen (GC16 mode) with an image that EPD_IT8951_4bp_Load()
+already uploaded to Target_Memory_Addr. Returns as soon as the
+controller starts the update; call EPD_IT8951_WaitForDisplayReady()
+to wait for it to finish.
+******************************************************************************/
+void EPD_IT8951_4bp_Show(UWORD X, UWORD Y, UWORD W, UWORD H, UDOUBLE Target_Memory_Addr)
+{
+    EPD_IT8951_Display_AreaBuf(X, Y, W, H, GC16_Mode, Target_Memory_Addr);
 }
 
 

@@ -89,6 +89,8 @@
 #define UWORD   uint16_t
 #define UDOUBLE uint32_t
 
+// spidev's default limit for one transfer (/sys/module/spidev/parameters/bufsiz).
+#define DEV_SPI_MAX_TRANSFER 4096
 
 
 
@@ -98,6 +100,7 @@ void DEV_Digital_Write(UWORD Pin, UBYTE Value);
 UBYTE DEV_Digital_Read(UWORD Pin);
 
 void DEV_SPI_WriteByte(UBYTE Value);
+void DEV_SPI_Write_nByte(const UBYTE* Buf, UDOUBLE Len);
 UBYTE DEV_SPI_ReadByte();
 
 void DEV_Delay_ms(UDOUBLE xms);

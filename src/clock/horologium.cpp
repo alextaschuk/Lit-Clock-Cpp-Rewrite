@@ -1,5 +1,6 @@
 #include "clock/horologium.hpp"
 
+#include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
@@ -115,14 +116,6 @@ void Horologium::RefreshScreen(UBYTE* img)
 }
 
 
-void Horologium::DisplayQuoteFromBuffer()
-{
-    UBYTE* currentImagePtr = buffer.PopImage();
-    RefreshScreen(currentImagePtr);
-    spdlog::info("Displayed a new quote.");
-}
-
-
 void Horologium::BufferImage(size_t hour, size_t minute)
 {
     std::vector<unsigned char> packed4bpp = ConvertTo4Bpp(GetImage(hour, minute));
@@ -130,50 +123,62 @@ void Horologium::BufferImage(size_t hour, size_t minute)
 }
 
 
+std::pair<size_t, size_t> Horologium::LocalHourMinute(std::chrono::system_clock::time_point moment)
+{
+    std::time_t t = std::chrono::system_clock::to_time_t(moment);
+    std::tm local{};
+    localtime_r(&t, &local);
+    return {static_cast<size_t>(local.tm_hour), static_cast<size_t>(local.tm_min)};
+}
+
+
 void Horologium::RefreshBuffer()
 {
-    AdvanceTime(bufferedHour,bufferedMinute);
-    BufferImage(bufferedHour, bufferedMinute);
+    bufferedTime += std::chrono::minutes(1);
+    auto [hour, minute] = LocalHourMinute(bufferedTime);
+    BufferImage(hour, minute);
     spdlog::info("Refreshed the buffer with a new image");
 }
 
 
-void Horologium::GetTime(size_t& hour, size_t& minute)
+void Horologium::ResetBuffer(std::chrono::system_clock::time_point thisMinute)
 {
-    std::time_t t = std::time(nullptr);
-    std::tm* localTime = std::localtime(&t);
-    hour = localTime->tm_hour;
-    minute = localTime->tm_min;
+    buffer.Clear();
+    bufferedTime = thisMinute;
+    for (int i = 0; i < MAX_IMAGES_TO_BUFFER; i++)
+        RefreshBuffer();
 }
 
 
-void Horologium::AdvanceTime(size_t& hour, size_t& minute)
+void Horologium::PrepareNextQuote(bool clearScreen)
 {
-    if (minute == 59) {
-        minute = 0;
-        hour = (hour == 23) ? 0 : hour + 1;
-    } else {
-        minute += 1;
-    }
-}
-
-
-void Horologium::TickClockForward()
-{
+    auto start = std::chrono::steady_clock::now();
     WakeScreen();
 
-    //Perform a full refresh at the top of every hour.
-    // This helps prevent pixel ghosting.
-    size_t currHour = 0, currMin = 0;
-    GetTime(currHour, currMin);
-    if (currMin == 59) {
+    // Perform a full refresh at the top of every hour. This helps prevent pixel ghosting.
+    if (clearScreen) {
         spdlog::info("An hour has passed. Performing a full refresh on the display.");
-        EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, GC16_Mode);
+        EPD_IT8951_Clear_Refresh(Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
     }
-    
-    DisplayQuoteFromBuffer();
-    RefreshBuffer();
+
+    std::uint8_t* nextImage = buffer.PopImage();
+    EPD_IT8951_4bp_Load(nextImage, 0, 0, Panel_Width, Panel_Height, Init_Target_Memory_Addr, true);
+
+    std::chrono::duration<double> elapsed = std::chrono::steady_clock::now() - start;
+    spdlog::info("Uploaded the next quote to the screen in {:.2f} s.", elapsed.count());
+
     SleepScreen();
+}
+
+
+void Horologium::ShowPreparedQuote()
+{
+    WakeScreen();
+    EPD_IT8951_4bp_Show(0, 0, Panel_Width, Panel_Height, Init_Target_Memory_Addr);
+    spdlog::info("Displayed a new quote.");
+
+    RefreshBuffer(); // render the next image while the screen updates
+    SleepScreen();   // waits for the update to finish before sleeping
 }
 
 
